@@ -1,5 +1,6 @@
+"use client";
 import Image from "next/image";
-("use client");
+
 
 import { useState } from "react";
 import { toast } from "sonner";

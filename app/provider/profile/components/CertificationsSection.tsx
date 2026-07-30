@@ -1,6 +1,8 @@
-import Image from "next/image";
+"use client";
+
 import { useState } from "react";
 import { toast } from "sonner";
+import Image from "next/image";
 import { getUserFriendlyErrorMessage } from "@/lib/errors/error-message";
 import { AwardIcon, PlusIcon } from "./icons";
 import type { Certification } from "../types";
@@ -55,7 +57,6 @@ export function CertificationsSection({ certifications, setCertifications, onRef
   };
 
   const handleRemoveCert = async (id: string) => {
-    // Optimistic update
     setCertifications((prev) => prev.filter((c) => c.id !== id));
     try {
       const res = await fetch("/api/provider/settings/certifications", {
@@ -79,7 +80,13 @@ export function CertificationsSection({ certifications, setCertifications, onRef
         {certifications.map((cert) => (
           <div key={cert.id} className="cert-row">
             <div className="cert-label">
-              <Image src="" alt="" width={100} height={100} /> setPreviewCert(cert.url)}
+              <Image
+                src={cert.url}
+                alt={cert.title}
+                width={72}
+                height={72}
+                className="cert-thumb"
+                onClick={() => setPreviewCert(cert.url)}
               />
               <div className="cert-info">
                 <span className="cert-title">
@@ -135,7 +142,13 @@ export function CertificationsSection({ certifications, setCertifications, onRef
       {previewCert && (
         <div className="photo-modal" onClick={() => setPreviewCert(null)}>
           <div className="photo-content" onClick={(e) => e.stopPropagation()}>
-            <Image src="" alt="Certificate" width={100} height={100} />
+            <Image
+              src={previewCert}
+              alt="Certificate"
+              width={400}
+              height={400}
+              className="cert-full-image"
+            />
             <button className="btn-close-preview" onClick={() => setPreviewCert(null)}>
               X
             </button>

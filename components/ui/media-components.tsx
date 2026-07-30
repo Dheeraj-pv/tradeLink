@@ -1,5 +1,6 @@
+"use client";
 import Image from "next/image";
-("use client");
+
 
 import { useEffect, useMemo } from "react";
 import { UploadIcon, XCircleIcon } from "@/components/ui/icons";
