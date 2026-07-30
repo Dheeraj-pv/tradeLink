@@ -1,0 +1,243 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                  String                  @id @default(cuid())
+  email               String                  @unique
+  password            String
+  name                String
+  userRole            UserRole
+  phone               String?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  passwordVersion     Int                     @default(0)
+  twoFactorEnabled    Boolean                 @default(false)
+  twoFactorSecret     String?
+  backupCodes         BackupCode[]
+  bids                Bid[]
+  deviceTokens        DeviceToken[]
+  assignedJobs        Job[]                   @relation("AssignedProviderJobs")
+  jobsCreated         Job[]                   @relation("CustomerJobs")
+  notifications       Notification[]
+  passwordResetTokens PasswordResetToken[]
+  providerCategories  ProviderCategory[]
+  certifications      ProviderCertification[]
+  providerDetails     ProviderDetails?
+  customerReviews     Review[]                @relation("CustomerReviews")
+  providerReviews     Review[]                @relation("ProviderReviews")
+}
+
+model Category {
+  name      String             @unique
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  id        Int                @id @default(autoincrement())
+  jobs      Job[]
+  providers ProviderCategory[]
+}
+
+model Job {
+  id                 String     @id @default(cuid())
+  title              String
+  description        String
+  address            String
+  status             JobStatus  @default(OPEN)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  customerId         String
+  assignedProviderId String?
+  categoryId         Int
+  bids               Bid[]
+  assignedProvider   User?      @relation("AssignedProviderJobs", fields: [assignedProviderId], references: [id],onDelete: SetNull)
+  category           Category   @relation(fields: [categoryId], references: [id])
+  customer           User       @relation("CustomerJobs", fields: [customerId], references: [id], onDelete: Cascade)
+  media              JobMedia[]
+  review             Review?
+
+  @@index([customerId])
+  @@index([assignedProviderId])
+  @@index([categoryId])
+  @@index([status])
+}
+
+model Bid {
+  id         String    @id @default(cuid())
+  amount     Decimal   @db.Decimal(10, 2)
+  status     BidStatus @default(PENDING)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  jobId      String
+  providerId String
+  message    String?
+  job        Job       @relation(fields: [jobId], references: [id])
+  provider   User      @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
+  @@index([jobId])
+  @@index([status])
+}
+
+model Review {
+  id         String        @id @default(cuid())
+  rating     Int
+  comment    String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  jobId      String        @unique
+  customerId String
+  providerId String
+  customer   User          @relation("CustomerReviews", fields: [customerId], references: [id], onDelete: Cascade)
+  job        Job           @relation(fields: [jobId], references: [id])
+  provider   User          @relation("ProviderReviews", fields: [providerId], references: [id], onDelete: Cascade)
+  media      ReviewMedia[]
+
+  @@index([customerId])
+  @@index([providerId])
+}
+
+model JobMedia {
+  id        String    @id @default(cuid())
+  mediaType MediaType
+  filePath  String
+  createdAt DateTime  @default(now())
+  jobId     String
+  job       Job       @relation(fields: [jobId], references: [id])
+
+  @@index([jobId])
+}
+
+model ReviewMedia {
+  id        String    @id @default(cuid())
+  mediaType MediaType
+  filePath  String
+  createdAt DateTime  @default(now())
+  reviewId  String
+  review    Review    @relation(fields: [reviewId], references: [id])
+
+  @@index([reviewId])
+}
+
+model ProviderDetails {
+  id           String   @id @default(cuid())
+  profileImage String?
+  avgRating    Float    @default(0)
+  reviewCount  Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  title       String
+  message     String
+  type        NotificationType
+  isRead      Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  userId      String
+  referenceId String?
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model ProviderCertification {
+  id        String   @id @default(cuid())
+  title     String
+  filePath  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ProviderCategory {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  userId     String
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoryId])
+  @@index([userId])
+  @@index([categoryId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model DeviceToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model BackupCode {
+  id        String   @id @default(cuid())
+  code      String
+  used      Boolean  @default(false)
+  userId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+enum UserRole {
+  CUSTOMER
+  PROVIDER
+}
+
+enum JobStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  AWAITING_APPROVAL
+}
+
+enum BidStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+enum NotificationType {
+  BID_RECEIVED
+  JOB_ASSIGNED
+  REVIEW_RECEIVED
+  AWAITING_APPROVAL
+}

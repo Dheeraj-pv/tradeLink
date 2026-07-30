@@ -1,0 +1,37 @@
+export const ErrorCode = {
+  // Validation (1000s)
+  INVALID_INPUT: "E1001",
+  INVALID_REQUEST_BODY: "E1002",
+
+  // Authentication (2000s)
+  INVALID_CREDENTIALS: "E2001",
+  INVALID_TOKEN: "E2002",
+  EXPIRED_TOKEN: "E2003",
+  TWO_FACTOR_REQUIRED: "E2004",
+  CURRENT_PASSWORD_MISMATCH: "E2005",
+  INVALID_2FA_CODE: "E2006",
+  INVALID_RESET_LINK: "E2007",
+
+
+  // Authorization (3000s)
+  ACCESS_DENIED: "E3001",
+
+  // Resources (4000s)
+  USER_NOT_FOUND: "E4001",
+  JOB_NOT_FOUND: "E4002",
+  BID_NOT_FOUND: "E2003",
+  REVIEW_NOT_FOUND: "E2004",
+  MEDIA_NOT_FOUND: "E2005",
+
+  // Conflicts (5000s)
+  EMAIL_ALREADY_EXISTS: "E5001",
+  BID_ALREADY_EXISTS: "E5002",
+  REVIEW_ALREADY_EXiSTS: "E5003",
+  CERTIFICTAION_NOT_FOUND: "E5004",
+
+  // Server (9000s)
+  INTERNAL_SERVER_ERROR: "E9001",
+} as const;
+
+export type ErrorCode =
+  (typeof ErrorCode)[keyof typeof ErrorCode];

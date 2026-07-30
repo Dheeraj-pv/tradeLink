@@ -1,0 +1,120 @@
+# docker-compose.yml
+# Place at the project root alongside package.json
+
+services:
+  # ── PostgreSQL ─────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: tradelink-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tradelink}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tradelink}
+      POSTGRES_DB: ${POSTGRES_DB:-tradelink}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tradelink}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── MinIO (object storage for job/review media) ────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: tradelink-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000" # S3 API
+      - "9001:9001" # Web console → http://localhost:9001
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Mailpit (local SMTP + email UI for development) ────────────────────
+  # Catches all outgoing emails — open http://localhost:8025 to read them.
+  # No emails actually leave your machine in dev.
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: tradelink-mail
+    restart: unless-stopped
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI → http://localhost:8025
+
+  # ── jaegertracing ────────────────────────────────────────────────────────
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"
+      - "4318:4318"
+
+  # ── Next.js app ────────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY}
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID}
+        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}
+        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}
+        NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID}
+        NEXT_PUBLIC_FIREBASE_VAPID_KEY: ${NEXT_PUBLIC_FIREBASE_VAPID_KEY}
+    container_name: tradelink-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
+    env_file:
+      - .env
+
+    environment:
+      NODE_ENV: production
+
+      # Database
+      DATABASE_URL: postgresql://${POSTGRES_USER:-tradelink}:${POSTGRES_PASSWORD:-tradelink}@postgres:5432/${POSTGRES_DB:-tradelink}
+
+      # Auth
+      JWT_SECRET: ${JWT_SECRET}
+
+      # MinIO — uses the internal Docker network name, not localhost
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: false
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-tradelink-media}
+
+      # SMTP — points to mailpit in dev; swap for real SMTP in prod
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_SECURE: false
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      SMTP_FROM: "noreply@tradelink.com"
+
+      # Public URL used in reset-password emails
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
+  minio_data:

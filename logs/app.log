@@ -1,0 +1,25 @@
+[30 Jul 2026, 12:08:21 pm] INFO
+{
+  method: 'GET',
+  path: '/api/notifications/unread-count'
+}
+
+----------------------------------------
+
+[30 Jul 2026, 12:08:21 pm] INFO
+{
+  userId: 'cmr4iqxbg0005chzweogjavif'
+}
+Customer requested unread notification count
+
+----------------------------------------
+
+[30 Jul 2026, 12:08:21 pm] INFO
+{
+  userId: 'cmr4iqxbg0005chzweogjavif',
+  unreadCount: 0
+}
+Unread notification count loaded successfully
+
+----------------------------------------
+
