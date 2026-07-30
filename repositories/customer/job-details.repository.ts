@@ -1,11 +1,6 @@
 import { getPrisma } from "@/lib/prisma";
 
- 
-
-export async function findCustomerJobById(
-  id: string,
-  customerId: string,
-) {
+export async function findCustomerJobById(id: string, customerId: string) {
   const prisma = getPrisma();
   return prisma.job.findFirst({
     where: {

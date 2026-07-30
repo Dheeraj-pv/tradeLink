@@ -1,4 +1,5 @@
-"use client";
+import Image from "next/image";
+("use client");
 
 import { useEffect, useMemo } from "react";
 import { UploadIcon, XCircleIcon } from "@/components/ui/icons";
@@ -33,14 +34,10 @@ export function MediaPreviewModal({
   lightCloseButton?: boolean;
 }) {
   return (
-    <div
-      className="preview-modal"
-      style={{ zIndex }}
-      onClick={onClose}
-    >
+    <div className="preview-modal" style={{ zIndex }} onClick={onClose}>
       <div className="preview-content" onClick={(e) => e.stopPropagation()}>
         {type === "image" ? (
-          <img src={src} alt={alt} />
+          <Image src="" alt="" width={100} height={100} />
         ) : (
           <video controls autoPlay>
             <source src={src} />
@@ -127,7 +124,7 @@ export function MediaGallery({
           onClick={() => onSelect(index)}
         >
           {getMediaKind(item) === "image" ? (
-            <img src={item.url} alt="" />
+            <Image src="" alt="" width={100} height={100} />
           ) : (
             <video muted preload="metadata">
               <source src={item.url} />
@@ -177,12 +174,9 @@ export function ExistingMediaGrid({
     <div className="media-grid">
       {items.map((item, index) => (
         <div key={item.id} className="media-tile">
-          <div
-            className="media-tile-inner"
-            onClick={() => onPreview(index)}
-          >
+          <div className="media-tile-inner" onClick={() => onPreview(index)}>
             {getMediaKind(item) === "image" ? (
-              <img src={item.url} alt="" />
+              <Image src="" alt="" width={100} height={100} />
             ) : (
               <video muted src={item.url} />
             )}
@@ -320,7 +314,9 @@ export function FileUploadDropzone({
           padding: 28px 20px;
           text-align: center;
           cursor: pointer;
-          transition: border-color 0.15s, background 0.15s;
+          transition:
+            border-color 0.15s,
+            background 0.15s;
           color: var(--text);
         }
         .upload-zone.compact {
@@ -389,7 +385,7 @@ export function FileList({
                 <source src={preview.url} type={preview.file.type} />
               </video>
             ) : (
-              <img src={preview.url} alt="" />
+              <Image src="" alt="" width={100} height={100} />
             )}
           </div>
           <div className="file-info">

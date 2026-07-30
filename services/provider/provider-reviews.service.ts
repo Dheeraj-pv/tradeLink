@@ -17,9 +17,7 @@ export async function getProviderReviews() {
     if (!user) {
       span.setAttribute("failure.reason", "unauthorized");
 
-      logger.warn(
-        "Unauthenticated user attempted to access provider reviews",
-      );
+      logger.warn("Unauthenticated user attempted to access provider reviews");
 
       throw new AuthenticationError(ErrorCode.INVALID_CREDENTIALS);
     }

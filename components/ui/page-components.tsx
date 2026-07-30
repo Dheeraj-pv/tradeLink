@@ -79,7 +79,9 @@ export function EmptyState({ title, description, children }: EmptyStateProps) {
   return (
     <div className="empty-state">
       <h2 className="empty-state-title">{title}</h2>
-      {description ? <p className="empty-state-description">{description}</p> : null}
+      {description ? (
+        <p className="empty-state-description">{description}</p>
+      ) : null}
       {children ? <div className="empty-state-actions">{children}</div> : null}
       <style jsx>{`
         .empty-state {
@@ -129,9 +131,13 @@ export function SettingsCard({
 }: SettingsCardProps) {
   return (
     <section className={`settings-card ${className ?? ""}`.trim()}>
-      <h2 className={`settings-card-title ${titleClassName ?? ""}`.trim()}>{title}</h2>
+      <h2 className={`settings-card-title ${titleClassName ?? ""}`.trim()}>
+        {title}
+      </h2>
       {subtitle ? (
-        <p className={`settings-card-subtitle ${subtitleClassName ?? ""}`.trim()}>
+        <p
+          className={`settings-card-subtitle ${subtitleClassName ?? ""}`.trim()}
+        >
           {subtitle}
         </p>
       ) : null}
@@ -272,7 +278,9 @@ export function StatsGrid({ items, selectedFilter, onSelect }: StatsGridProps) {
   return (
     <div className="stat-grid">
       {items.map((item) => {
-        const isSelected = selectedFilter ? selectedFilter === item.filter : false;
+        const isSelected = selectedFilter
+          ? selectedFilter === item.filter
+          : false;
 
         return (
           <button
@@ -297,7 +305,9 @@ export function StatsGrid({ items, selectedFilter, onSelect }: StatsGridProps) {
           border: none;
           text-align: left;
           cursor: pointer;
-          transition: transform 0.15s ease, box-shadow 0.15s ease;
+          transition:
+            transform 0.15s ease,
+            box-shadow 0.15s ease;
           border-radius: 12px;
           padding: 22px 24px;
           background: var(--white);
@@ -405,7 +415,9 @@ export function SettingsTabs({ items }: SettingsTabsProps) {
           border-radius: 8px;
           color: var(--sub);
           text-decoration: none;
-          transition: background 0.15s, color 0.15s;
+          transition:
+            background 0.15s,
+            color 0.15s;
         }
         .settings-tab.active {
           background: var(--white);

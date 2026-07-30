@@ -18,7 +18,7 @@ export async function getDashboardData(
   categoryIds: number[],
   skip: number,
   take: number,
-){
+) {
   const prisma = getPrisma();
 
   const [

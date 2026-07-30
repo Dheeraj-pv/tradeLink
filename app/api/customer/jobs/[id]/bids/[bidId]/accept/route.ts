@@ -9,10 +9,7 @@ type RouteParams = {
   }>;
 };
 
-export async function POST(
-  req: NextRequest,
-  { params }: RouteParams,
-) {
+export async function POST(req: NextRequest, { params }: RouteParams) {
   try {
     return await acceptBidController(req, { params });
   } catch (error) {

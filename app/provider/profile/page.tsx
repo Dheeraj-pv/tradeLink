@@ -91,7 +91,10 @@ export default function ProviderProfileSettingsPage() {
 
   return (
     <div className="dash-page">
-      <PageHeader title="Provider Settings" subtitle="Manage your profile and preferences" />
+      <PageHeader
+        title="Provider Settings"
+        subtitle="Manage your profile and preferences"
+      />
 
       <SettingsTabs
         items={[

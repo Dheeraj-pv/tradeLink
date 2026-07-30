@@ -71,14 +71,8 @@ export async function getProviderSettings() {
     }
 
     span.setAttribute("certifications.count", certifications.length);
-    span.setAttribute(
-      "categories.selected_count",
-      providerCategories.length,
-    );
-    span.setAttribute(
-      "categories.available_count",
-      categories.length,
-    );
+    span.setAttribute("categories.selected_count", providerCategories.length);
+    span.setAttribute("categories.available_count", categories.length);
 
     logger.info(
       {
@@ -110,18 +104,14 @@ export async function getProviderSettings() {
         id: cert.id,
         title: cert.title,
         filePath: cert.filePath,
-        url: cert.filePath
-          ? getMediaUrl(cert.filePath)
-          : null,
+        url: cert.filePath ? getMediaUrl(cert.filePath) : null,
       })),
       categories,
     };
   });
 }
 
-export async function updateProviderProfile(
-  data: UpdateProfileInput,
-) {
+export async function updateProviderProfile(data: UpdateProfileInput) {
   return withSpan("Update Provider Profile", async (span) => {
     const user = await withSpan("Authenticate User", async () => {
       return await getCurrentUser();
@@ -149,10 +139,7 @@ export async function updateProviderProfile(
       );
     });
 
-    span.setAttribute(
-      "categories.selected_count",
-      data.categoryIds.length,
-    );
+    span.setAttribute("categories.selected_count", data.categoryIds.length);
 
     logger.info(
       {
@@ -164,9 +151,7 @@ export async function updateProviderProfile(
   });
 }
 
-export async function changeProviderPassword(
-  data: ChangePasswordInput,
-) {
+export async function changeProviderPassword(data: ChangePasswordInput) {
   return withSpan("Change Provider Password", async (span) => {
     const user = await withSpan("Authenticate User", async () => {
       return await getCurrentUser();
@@ -195,15 +180,9 @@ export async function changeProviderPassword(
       throw new NotFoundError(ErrorCode.USER_NOT_FOUND);
     }
 
-    const valid = await withSpan(
-      "Verify Current Password",
-      async () => {
-        return verifyPassword(
-          data.currentPassword,
-          dbUser.password,
-        );
-      },
-    );
+    const valid = await withSpan("Verify Current Password", async () => {
+      return verifyPassword(data.currentPassword, dbUser.password);
+    });
 
     if (!valid) {
       span.setAttribute("failure.reason", "invalid_password");
@@ -215,9 +194,7 @@ export async function changeProviderPassword(
         "Password change failed: incorrect current password",
       );
 
-      throw new AuthenticationError(
-        ErrorCode.CURRENT_PASSWORD_MISMATCH,
-      );
+      throw new AuthenticationError(ErrorCode.CURRENT_PASSWORD_MISMATCH);
     }
 
     if (dbUser.twoFactorEnabled) {
@@ -226,17 +203,12 @@ export async function changeProviderPassword(
 
         throw new ValidationError(ErrorCode.INVALID_INPUT);
       }
-      const twoFactorCode = data.twoFactorCode
+      const twoFactorCode = data.twoFactorCode;
 
       const verified = await withSpan(
         "Verify Two-Factor Authentication",
         async () => {
-          if (
-            await verifyBackupCode(
-              user.id,
-              twoFactorCode,
-            )
-          ) {
+          if (await verifyBackupCode(user.id, twoFactorCode)) {
             return true;
           }
 
@@ -257,9 +229,7 @@ export async function changeProviderPassword(
           "Provider supplied an invalid 2FA code",
         );
 
-        throw new AuthenticationError(
-          ErrorCode.INVALID_2FA_CODE,
-        );
+        throw new AuthenticationError(ErrorCode.INVALID_2FA_CODE);
       }
     }
 
@@ -268,10 +238,7 @@ export async function changeProviderPassword(
     });
 
     await withSpan("Update Password", async () => {
-      await providerSettingsRepository.updatePassword(
-        user.id,
-        hashed,
-      );
+      await providerSettingsRepository.updatePassword(user.id, hashed);
     });
 
     logger.info(
@@ -303,9 +270,7 @@ export async function deleteProviderAccount() {
     );
 
     await withSpan("Delete Account", async () => {
-      await providerSettingsRepository.deleteProviderAccount(
-        user.id,
-      );
+      await providerSettingsRepository.deleteProviderAccount(user.id);
     });
 
     logger.info(

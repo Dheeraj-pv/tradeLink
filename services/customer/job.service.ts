@@ -1,4 +1,4 @@
-    import { JobStatus, Prisma } from "@prisma/client";
+import { JobStatus, Prisma } from "@prisma/client";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { logger } from "@/lib/logger";
 import { withSpan } from "@/lib/tracing";

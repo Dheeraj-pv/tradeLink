@@ -1,8 +1,6 @@
 import { JobStatus, Prisma } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
 
- 
-
 export async function findCustomerJobs(
   where: Prisma.JobWhereInput,
   skip: number,

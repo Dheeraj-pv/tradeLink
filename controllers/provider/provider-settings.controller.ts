@@ -45,9 +45,7 @@ export async function getProviderSettingsController() {
   );
 }
 
-export async function updateProviderSettingsController(
-  req: NextRequest,
-) {
+export async function updateProviderSettingsController(req: NextRequest) {
   let body: unknown;
 
   try {
@@ -56,11 +54,7 @@ export async function updateProviderSettingsController(
     throw new ValidationError(ErrorCode.INVALID_REQUEST_BODY);
   }
 
-  if (
-    typeof body !== "object" ||
-    body === null ||
-    !("action" in body)
-  ) {
+  if (typeof body !== "object" || body === null || !("action" in body)) {
     throw new ValidationError(ErrorCode.INVALID_INPUT);
   }
 

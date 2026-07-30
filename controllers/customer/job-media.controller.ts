@@ -7,7 +7,6 @@ import {
 } from "@/services/customer/job-media.service";
 import { ErrorCode } from "@/lib/errors/ErrorCode";
 
-
 type RouteParams = {
   params: Promise<{
     id: string;

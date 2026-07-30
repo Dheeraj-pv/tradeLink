@@ -18,24 +18,15 @@ const profileSchema = z.object({
 const passwordSchema = z
   .object({
     action: z.literal("password"),
-    currentPassword: z
-      .string()
-      .min(1, "Current password is required"),
-    newPassword: z
-      .string()
-      .min(8, "Password must be at least 8 characters"),
-    confirmPassword: z
-      .string()
-      .min(1, "Please confirm password"),
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string().min(1, "Please confirm password"),
     twoFactorCode: z.string().optional(),
   })
-  .refine(
-    (data) => data.newPassword === data.confirmPassword,
-    {
-      path: ["confirmPassword"],
-      message: "Passwords do not match",
-    },
-  );
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords do not match",
+  });
 
 const settingsSchema = z.discriminatedUnion("action", [
   profileSchema,
@@ -58,9 +49,7 @@ export async function getCustomerSettingsController() {
   );
 }
 
-export async function updateCustomerSettingsController(
-  req: NextRequest,
-) {
+export async function updateCustomerSettingsController(req: NextRequest) {
   let body: unknown;
 
   try {

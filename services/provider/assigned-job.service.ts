@@ -77,9 +77,7 @@ export async function getAssignedJob(jobId: string) {
       customerId: job.customer.id,
       customerName: job.customer.name,
       createdAt: job.createdAt.toISOString().split("T")[0],
-      agreedAmount: job.bids[0]
-        ? Number(job.bids[0].amount)
-        : null,
+      agreedAmount: job.bids[0] ? Number(job.bids[0].amount) : null,
     };
   });
 }

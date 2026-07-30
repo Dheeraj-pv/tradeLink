@@ -18,18 +18,9 @@ interface RegisteredUser {
   role: "CUSTOMER" | "PROVIDER";
 }
 
-export async function register(
-  input: RegisterInput,
-): Promise<RegisteredUser> {
+export async function register(input: RegisterInput): Promise<RegisteredUser> {
   return withSpan("Register User", async (span) => {
-    const {
-      name,
-      email,
-      password,
-      role,
-      phone,
-      categoryIds = [],
-    } = input;
+    const { name, email, password, role, phone, categoryIds = [] } = input;
 
     const normalizedEmail = email.toLowerCase().trim();
 
@@ -55,9 +46,7 @@ export async function register(
         "Registration failed: email already exists",
       );
 
-      throw new ConflictError(
-        ErrorCode.EMAIL_ALREADY_EXISTS,
-      );
+      throw new ConflictError(ErrorCode.EMAIL_ALREADY_EXISTS);
     }
 
     const hashedPassword = await withSpan("Hash Password", async () => {
@@ -77,10 +66,7 @@ export async function register(
 
     span.setAttribute("user.id", user.id);
     span.setAttribute("user.role", user.userRole);
-    span.setAttribute(
-      "provider.categories.count",
-      categoryIds.length,
-    );
+    span.setAttribute("provider.categories.count", categoryIds.length);
 
     logger.info(
       {

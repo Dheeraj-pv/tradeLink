@@ -10,9 +10,7 @@ type GetProviderDashboardInput = {
   limit: number;
 };
 
-export async function getProviderDashboard(
-  input: GetProviderDashboardInput,
-) {
+export async function getProviderDashboard(input: GetProviderDashboardInput) {
   return withSpan("Get Provider Dashboard", async (span) => {
     const user = await withSpan("Authenticate User", async () => {
       return (await getCurrentUser())!;
@@ -33,18 +31,11 @@ export async function getProviderDashboard(
 
     const skip = (input.page - 1) * input.limit;
 
-    const categories = await withSpan(
-      "Load Provider Categories",
-      async () => {
-        return providerDashboardRepository.findProviderCategories(
-          user.id,
-        );
-      },
-    );
+    const categories = await withSpan("Load Provider Categories", async () => {
+      return providerDashboardRepository.findProviderCategories(user.id);
+    });
 
-    const categoryIds = categories.map(
-      (category) => category.categoryId,
-    );
+    const categoryIds = categories.map((category) => category.categoryId);
 
     const {
       availableJobsCount,
@@ -64,34 +55,16 @@ export async function getProviderDashboard(
 
     const totalPages = Math.ceil(totalItems / input.limit);
 
-    span.setAttribute(
-      "dashboard.available_jobs",
-      availableJobsCount,
-    );
-    span.setAttribute(
-      "dashboard.pending_bids",
-      pendingBidsCount,
-    );
-    span.setAttribute(
-      "dashboard.assigned_jobs",
-      assignedJobsCount,
-    );
+    span.setAttribute("dashboard.available_jobs", availableJobsCount);
+    span.setAttribute("dashboard.pending_bids", pendingBidsCount);
+    span.setAttribute("dashboard.assigned_jobs", assignedJobsCount);
     span.setAttribute(
       "dashboard.review_count",
       providerDetails?.reviewCount ?? 0,
     );
-    span.setAttribute(
-      "dashboard.recent_jobs",
-      recentJobs.length,
-    );
-    span.setAttribute(
-      "dashboard.total_items",
-      totalItems,
-    );
-    span.setAttribute(
-      "dashboard.total_pages",
-      totalPages,
-    );
+    span.setAttribute("dashboard.recent_jobs", recentJobs.length);
+    span.setAttribute("dashboard.total_items", totalItems);
+    span.setAttribute("dashboard.total_pages", totalPages);
 
     logger.info(
       {

@@ -12,7 +12,7 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { ok, error } from "@/lib/api";
 import { logger } from "@/lib/logger";
 import { withSpan } from "@/lib/tracing";
-import { PutObjectCommand,DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 const ALLOWED: string[] = [
   "image/png",
@@ -132,14 +132,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         const buffer = Buffer.from(await image.arrayBuffer());
 
         await getS3().send(
-  new PutObjectCommand({
-    Bucket: JOB_MEDIA_BUCKET,
-    Key: objectName,
-    Body: buffer,
-    ContentType: image.type,
-    ContentLength: buffer.length,
-  }),
-);
+          new PutObjectCommand({
+            Bucket: JOB_MEDIA_BUCKET,
+            Key: objectName,
+            Body: buffer,
+            ContentType: image.type,
+            ContentLength: buffer.length,
+          }),
+        );
 
         const existing: ProviderProfileImage | null =
           await prisma.providerDetails.findUnique({
@@ -164,25 +164,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           const oldObjectName = objectNameFromUrl(existing.profileImage);
 
           if (oldObjectName) {
-            
-
-await getS3()
-  .send(
-    new DeleteObjectCommand({
-      Bucket: JOB_MEDIA_BUCKET,
-      Key: oldObjectName,
-    }),
-  )
-  .catch((err: unknown) => {
-    logger.warn(
-      {
-        userId: user.id,
-        oldObjectName,
-        err,
-      },
-      "Failed to delete previous profile image",
-    );
-  });
+            await getS3()
+              .send(
+                new DeleteObjectCommand({
+                  Bucket: JOB_MEDIA_BUCKET,
+                  Key: oldObjectName,
+                }),
+              )
+              .catch((err: unknown) => {
+                logger.warn(
+                  {
+                    userId: user.id,
+                    oldObjectName,
+                    err,
+                  },
+                  "Failed to delete previous profile image",
+                );
+              });
           }
         }
 

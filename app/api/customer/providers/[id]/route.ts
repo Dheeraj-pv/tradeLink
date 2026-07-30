@@ -8,10 +8,7 @@ type RouteParams = {
   }>;
 };
 
-export async function GET(
-  req: NextRequest,
-  { params }: RouteParams,
-) {
+export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
     return await getProviderProfileController(req, { params });
   } catch (error) {

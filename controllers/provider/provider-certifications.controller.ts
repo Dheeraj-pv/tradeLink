@@ -11,9 +11,7 @@ const deleteCertificationSchema = z.object({
   id: z.string().min(1),
 });
 
-export async function uploadProviderCertificationController(
-  req: NextRequest,
-) {
+export async function uploadProviderCertificationController(req: NextRequest) {
   let formData: FormData;
 
   try {
@@ -37,9 +35,7 @@ export async function uploadProviderCertificationController(
   );
 }
 
-export async function deleteProviderCertificationController(
-  req: NextRequest,
-) {
+export async function deleteProviderCertificationController(req: NextRequest) {
   let body: unknown;
 
   try {

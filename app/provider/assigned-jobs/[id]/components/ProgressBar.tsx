@@ -26,8 +26,8 @@ export function ProgressBar({ status }: Props) {
                   done
                     ? "line-navy"
                     : active && waiting
-                    ? "line-amber"
-                    : "line-empty"
+                      ? "line-amber"
+                      : "line-empty"
                 }`}
               />
             )}
@@ -36,10 +36,10 @@ export function ProgressBar({ status }: Props) {
                 done
                   ? "circle-done"
                   : active && waiting
-                  ? "circle-waiting"
-                  : active
-                  ? "circle-active"
-                  : "circle-empty"
+                    ? "circle-waiting"
+                    : active
+                      ? "circle-active"
+                      : "circle-empty"
               }`}
             >
               {done ? <CheckCircleIcon size={12} /> : null}
@@ -50,10 +50,10 @@ export function ProgressBar({ status }: Props) {
                 done
                   ? "label-navy"
                   : active && waiting
-                  ? "label-amber"
-                  : active
-                  ? "label-navy"
-                  : "label-muted"
+                    ? "label-amber"
+                    : active
+                      ? "label-navy"
+                      : "label-muted"
               }`}
             >
               {stage.label}

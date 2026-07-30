@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ValidationError } from "@/lib/errors/ValidationError";
-import {
-  getJobForEdit,
-  updateJob,
-} from "@/services/customer/edit-job.service";
-import{z} from "zod"
+import { getJobForEdit, updateJob } from "@/services/customer/edit-job.service";
+import { z } from "zod";
 import { ErrorCode } from "@/lib/errors/ErrorCode";
 
 type RouteParams = {
@@ -55,14 +52,13 @@ export async function updateJobController(
     throw new ValidationError(ErrorCode.INVALID_REQUEST_BODY);
   }
 
+  const parsed = updateJobSchema.safeParse(body);
 
-const parsed = updateJobSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ValidationError(ErrorCode.INVALID_INPUT);
+  }
 
-if (!parsed.success) {
-  throw new ValidationError(ErrorCode.INVALID_INPUT);
-}
-
-const job = await updateJob(id, parsed.data);
+  const job = await updateJob(id, parsed.data);
 
   return NextResponse.json(
     {

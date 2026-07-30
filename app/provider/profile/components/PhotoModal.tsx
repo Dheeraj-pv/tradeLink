@@ -1,3 +1,4 @@
+import Image from "next/image";
 interface Props {
   preview: string | null;
   onConfirm: () => void;
@@ -10,7 +11,7 @@ export function PhotoModal({ preview, onConfirm, onCancel }: Props) {
   return (
     <div className="photo-modal" onClick={onCancel}>
       <div className="photo-content" onClick={(e) => e.stopPropagation()}>
-        <img src={preview} className="photo-preview" alt="Preview" />
+        <Image src="" alt="Preview" width={100} height={100} />
         <p>Use this photo as your profile picture?</p>
         <div className="photo-actions">
           <button className="btn-confirm" onClick={onConfirm}>

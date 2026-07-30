@@ -1,8 +1,6 @@
 import { MediaType } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
 
- 
-
 export async function findReview(jobId: string) {
   const prisma = getPrisma();
   return prisma.review.findUnique({
@@ -16,10 +14,7 @@ export async function findReview(jobId: string) {
   });
 }
 
-export async function findOwnedReview(
-  jobId: string,
-  customerId: string,
-) {
+export async function findOwnedReview(jobId: string, customerId: string) {
   const prisma = getPrisma();
   return prisma.review.findFirst({
     where: {

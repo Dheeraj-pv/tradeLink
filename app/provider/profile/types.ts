@@ -11,13 +11,13 @@ export type Profile = {
   profileImage?: string | null;
 };
 
-export type Certification = { 
-  id: string; 
-  title: string; 
-  url: string 
+export type Certification = {
+  id: string;
+  title: string;
+  url: string;
 };
 
-export type Category = { 
-  id: number; 
-  name: string 
+export type Category = {
+  id: number;
+  name: string;
 };

@@ -1,154 +1,24 @@
 "use client";
-// app/provider/dashboard/page.tsx
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import Link from "next/link";
-import { toast } from "sonner";
 import { PageHeader, StatsGrid } from "@/components/ui/page-components";
-import { getUserFriendlyErrorMessage } from "@/lib/errors/error-message";
-
-// ============ ICONS ============
-function DropletIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
-    </svg>
-  );
-}
-
-function ZapIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-    </svg>
-  );
-}
-
-function WrenchIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-    </svg>
-  );
-}
-
-function PinIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-      <circle cx="12" cy="10" r="3" />
-    </svg>
-  );
-}
-
-function UserIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  );
-}
-
-function ChevronRightIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="9 18 15 12 9 6" />
-    </svg>
-  );
-}
-
-function CategoryIcon({ category }: { category?: string }) {
-  if (!category) return <WrenchIcon />;
-  const lower = category.toLowerCase();
-  if (lower.includes("plumb") || lower.includes("pipe") || lower.includes("water"))
-    return <DropletIcon />;
-  if (lower.includes("elect") || lower.includes("wir")) return <ZapIcon />;
-  return <WrenchIcon />;
-}
-
-// ============ TYPE DEFINITIONS ============
-type Job = {
-  id: string;
-  title: string;
-  address: string;
-  status: string;
-  createdAt: string;
-  bidCount: number;
-  category?: string;
-  customerName?: string;
-};
-
-type DashboardData = {
-  provider: {
-    name: string;
-    avgRating: number;
-    reviewCount: number;
-  };
-  stats: {
-    openJobs: number;
-    assignedJobs: number;
-    completedJobs: number;
-    totalJobs: number;
-    inProgressJobs: number;
-  };
-  recentJobs: Job[];
-  pagination: {
-    page: number;
-    limit: number;
-    totalItems: number;
-    totalPages: number;
-  };
-};
+import { useDashboard } from "./hooks/useDashboard";
+import { JobList } from "./components/JobList";
+import { Pagination } from "./components/Pagination";
+import { getStatCards } from "./utils/statsConfig";
 
 export default function ProviderDashboardPage() {
-  const [page, setPage] = useState(1);
-  const LIMIT = 5;
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  const isFirstRender = useRef(true);
-
-  const fetchDashboard = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const res = await fetch(`/api/provider/jobs?page=${page}&limit=${LIMIT}`);
-      const json = await res.json();
-      
-      if (!res.ok) {
-        const errorMsg = getUserFriendlyErrorMessage(json);
-        toast.error(errorMsg);
-        setError(errorMsg);
-        return;
-      }
-      
-      if (!json.data) {
-        setError("Invalid response format from server");
-        return;
-      }
-      
-      setData(json.data);
-      
-    } catch {
-      const errorMsg = "Network error — please try again.";
-      toast.error(errorMsg);
-      setError(errorMsg);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, LIMIT]);
-
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      fetchDashboard();
-    } else {
-      fetchDashboard();
-    }
-  }, [fetchDashboard]);
+  const {
+    data,
+    loading,
+    error,
+    page,
+    setPage,
+    fetchDashboard,
+    pagination,
+    stats,
+    provider,
+    recentJobs,
+  } = useDashboard();
 
   if (loading) {
     return (
@@ -161,7 +31,9 @@ export default function ProviderDashboardPage() {
   if (error) {
     return (
       <div className="dash-page">
-        <p className="pd-state" style={{ color: 'red' }}>Error: {error}</p>
+        <p className="pd-state" style={{ color: "red" }}>
+          Error: {error}
+        </p>
         <button onClick={() => fetchDashboard()} className="btn-retry">
           Retry
         </button>
@@ -177,124 +49,52 @@ export default function ProviderDashboardPage() {
     );
   }
 
-  const { provider, stats, recentJobs, pagination } = data;
-  const safeJobs = Array.isArray(recentJobs) ? recentJobs : [];
-  
-  const statCards = [
-    {
-      value: stats?.openJobs ?? 0,
-      label: "Available Jobs",
-      className: "sc-blue",
-    },
-    {
-      value: stats?.inProgressJobs ?? 0,
-      label: "In Progress",
-      className: "sc-amber",
-    },
-    {
-      value: stats?.assignedJobs ?? 0,
-      label: "Assigned Jobs",
-      className: "sc-green",
-    },
-    {
-      value: stats?.completedJobs ?? 0,
-      label: "Completed Jobs",
-      className: "sc-purple",
-    },
-  ];
-
+  // Safe access with optional chaining and fallbacks
   const providerName = provider?.name?.split(" ")[0] || "Provider";
+  const statCards = getStatCards(stats);
+
+  // Safe subtitle construction
+  const getSubtitle = () => {
+    if (!provider) return undefined;
+    if (provider.reviewCount > 0) {
+      return `${provider.reviewCount} reviews · ${provider.avgRating.toFixed(1)}★ average`;
+    }
+    return "No reviews yet";
+  };
 
   return (
     <div className="dash-page">
-      <PageHeader
-        title={`Welcome, ${providerName}`}
-        subtitle={
-          provider?.reviewCount > 0
-            ? `${provider.reviewCount} reviews · ${provider.avgRating.toFixed(1)}★ average`
-            : "No reviews yet"
-        }
-      />
+      <PageHeader title={`Welcome, ${providerName}`} subtitle={getSubtitle()} />
 
-      <StatsGrid
-        items={statCards.map((s) => ({
-          value: s.value,
-          label: s.label,
-          className: s.className,
-        }))}
-      />
-      
-      <div className="dash-section-header">
-        <h2 className="dash-section-title">Recent Available Jobs</h2>
-        <span className="job-count">{safeJobs.length} jobs</span>
-      </div>
+      <StatsGrid items={statCards} />
 
-      {safeJobs.length === 0 ? (
-        <p className="pd-state">No jobs available at the moment.</p>
-      ) : (
-        <div className="job-list">
-          {safeJobs.map((job) => (
-            <Link
-              key={job.id}
-              href={`/provider/dashboard/jobs/${job.id}`}
-              className="job-card"
-            >
-              <div className="job-icon">
-                <CategoryIcon category={job.category} />
-              </div>
-              <div className="job-info">
-                <div className="job-title-row">
-                  <span className="job-title">{job.title}</span>
-                  <span className={`job-badge badge-${job.status.toLowerCase()}`}>
-                    {job.status}
-                  </span>
-                </div>
-                <div className="job-meta">
-                  <span className="job-meta-item">
-                    <PinIcon />
-                    {job.address}
-                  </span>
-                  <span className="job-meta-item">
-                    <UserIcon />
-                    {job.customerName || `${job.bidCount} bid${job.bidCount !== 1 ? 's' : ''}`}
-                  </span>
-                </div>
-              </div>
-              <span className="job-chevron">
-                <ChevronRightIcon />
-              </span>
-            </Link>
-          ))}
-        </div>
+      <JobList jobs={recentJobs} />
+
+      {pagination && (
+        <Pagination
+          currentPage={page}
+          totalPages={pagination.totalPages}
+          onPageChange={setPage}
+        />
       )}
-      
-      {pagination && pagination.totalPages > 1 ? (
-        <div className="pagination">
-          <button onClick={() => setPage((p) => p - 1)} disabled={page === 1}>
-            Previous
-          </button>
-          <span>
-            Page {page} of {pagination.totalPages}
-          </span>
-          <button
-            onClick={() => setPage((p) => p + 1)}
-            disabled={page === pagination.totalPages}
-          >
-            Next
-          </button>
-        </div>
-      ) : null}
 
       <style>{`
         .pd-state {
-          color: var(--sub); font-size: .9rem;
-          padding: 40px 0; text-align: center;
+          color: var(--sub);
+          font-size: .9rem;
+          padding: 40px 0;
+          text-align: center;
         }
         .dash-section-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
           margin: 24px 0 16px 0;
+        }
+        .dash-section-title {
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: var(--navy);
         }
         .job-count {
           font-size: 0.9rem;
@@ -314,9 +114,11 @@ export default function ProviderDashboardPage() {
           border-radius: 8px;
           cursor: pointer;
           font: inherit;
+          transition: all 0.2s;
         }
         .pagination button:hover:not(:disabled) {
           border-color: var(--navy);
+          background: var(--bg-subtle);
         }
         .pagination button:disabled {
           opacity: .5;
@@ -335,6 +137,14 @@ export default function ProviderDashboardPage() {
           display: block;
           margin: 20px auto;
         }
+        .btn-retry:hover {
+          background: #253460;
+        }
+        .job-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
         .job-card {
           display: flex;
           align-items: center;
@@ -346,10 +156,13 @@ export default function ProviderDashboardPage() {
           text-decoration: none;
           color: inherit;
           transition: all 0.2s;
+          cursor: pointer;
         }
         .job-card:hover {
           border-color: var(--navy);
           background: var(--bg-subtle);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
         .job-icon {
           flex-shrink: 0;
@@ -375,6 +188,7 @@ export default function ProviderDashboardPage() {
           align-items: center;
           gap: 8px;
           margin-bottom: 4px;
+          flex-wrap: wrap;
         }
         .job-title {
           font-weight: 600;
@@ -408,6 +222,7 @@ export default function ProviderDashboardPage() {
           gap: 16px;
           font-size: 0.85rem;
           color: var(--sub);
+          flex-wrap: wrap;
         }
         .job-meta-item {
           display: flex;
@@ -421,6 +236,16 @@ export default function ProviderDashboardPage() {
         .job-chevron {
           flex-shrink: 0;
           color: var(--sub);
+        }
+        @media (max-width: 600px) {
+          .job-meta {
+            flex-direction: column;
+            gap: 4px;
+          }
+          .job-title-row {
+            flex-direction: column;
+            align-items: flex-start;
+          }
         }
       `}</style>
     </div>

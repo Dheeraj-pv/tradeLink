@@ -12,10 +12,7 @@ type RouteParams = {
   }>;
 };
 
-export async function POST(
-  req: NextRequest,
-  { params }: RouteParams,
-) {
+export async function POST(req: NextRequest, { params }: RouteParams) {
   try {
     return await uploadJobMediaController(req, { params });
   } catch (error) {
@@ -23,10 +20,7 @@ export async function POST(
   }
 }
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: RouteParams,
-) {
+export async function DELETE(req: NextRequest, { params }: RouteParams) {
   try {
     return await deleteJobMediaController(req, { params });
   } catch (error) {
@@ -34,10 +28,7 @@ export async function DELETE(
   }
 }
 
-export async function GET(
-  req: NextRequest,
-  { params }: RouteParams,
-) {
+export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
     return await getJobMediaController(req, { params });
   } catch (error) {

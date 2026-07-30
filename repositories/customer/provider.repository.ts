@@ -1,7 +1,5 @@
 import { getPrisma } from "@/lib/prisma";
 
- 
-
 export async function findProvider(providerId: string) {
   const prisma = getPrisma();
   return prisma.user.findUnique({
@@ -14,9 +12,7 @@ export async function findProvider(providerId: string) {
   });
 }
 
-export async function findProviderCertifications(
-  providerId: string,
-) {
+export async function findProviderCertifications(providerId: string) {
   const prisma = getPrisma();
   return prisma.providerCertification.findMany({
     where: {
@@ -30,9 +26,7 @@ export async function findProviderCertifications(
   });
 }
 
-export async function getProviderReviewStats(
-  providerId: string,
-) {
+export async function getProviderReviewStats(providerId: string) {
   const prisma = getPrisma();
   return prisma.review.aggregate({
     where: {
@@ -47,9 +41,7 @@ export async function getProviderReviewStats(
   });
 }
 
-export async function findRecentReviews(
-  providerId: string,
-) {
+export async function findRecentReviews(providerId: string) {
   const prisma = getPrisma();
   return prisma.review.findMany({
     where: {

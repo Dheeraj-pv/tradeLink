@@ -1,78 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import {
-  MediaGallery,
   MediaPreviewModal,
   type ServerMediaItem,
 } from "@/components/ui/media-components";
 import { BackLink } from "@/components/ui/page-components";
-import { RatingStars } from "@/components/ui/review-components";
-
-type Review = {
-  id?: string;
-  name: string;
-  rating: number;
-  comment: string;
-  media: ServerMediaItem[];
-};
-
-type Certification = {
-  id: string;
-  title: string;
-  url: string;
-};
-
-type Provider = {
-  id: string;
-  name: string;
-  profileImage: string | null;
-  specialty: string | null;
-  bio: string | null;
-  phone: string | null;
-  certifications: Certification[];
-  rating: number;
-  reviewCount: number;
-};
+import { useProviderProfile } from "./hooks/useProviderProfile";
+import { ProviderHeader } from "./components/ProviderHeader";
+import { ProviderInfo } from "./components/ProviderInfo";
+import { CertificationsList } from "./components/CertificationsList";
+import { ReviewsList } from "./components/ReviewsList";
+import type { Certification } from "./types";
 
 export default function ProviderProfilePage() {
   const params = useParams<{ id: string; providerId: string }>();
-  const { id, providerId } = params;
+  const jobId = params?.id;
+  const providerId = params?.providerId;
 
-  const [provider, setProvider] = useState<Provider | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [previewMedia, setPreviewMedia] = useState<ServerMediaItem | null>(null);
+  const { provider, reviews, loading, error } = useProviderProfile(providerId);
+  const [previewMedia, setPreviewMedia] = useState<ServerMediaItem | null>(
+    null,
+  );
 
-  useEffect(() => {
-    if (!providerId) return;
+  const backLink = `/customer/dashboard/jobs/${jobId}/bids`;
 
-    async function load() {
-      try {
-        const res = await fetch(`/api/customer/providers/${providerId}`);
-        if (!res.ok) {
-          const error = await res.json().catch(() => ({}));
-          setLoadError(error.error ?? "Failed to load provider");
-          return;
-        }
-
-        const response = await res.json();
-        setProvider(response.data.provider ?? null);
-        setReviews(Array.isArray(response.data.reviews) ? response.data.reviews : []);
-      } catch {
-        setLoadError("Network error — please try again.");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    void load();
-  }, [providerId]);
-
-  const backLink = `/customer/dashboard/jobs/${id}/bids`;
-
+  // Loading state
   if (loading) {
     return (
       <div className="dash-page">
@@ -82,124 +36,57 @@ export default function ProviderProfilePage() {
     );
   }
 
-  if (loadError || !provider) {
+  // Error or no provider
+  if (error || !provider) {
     return (
       <div className="dash-page">
         <BackLink href={backLink} label="Back to Bids" />
-        <p className="dash-page-sub">{loadError ?? "Provider not found"}</p>
+        <p
+          className="dash-page-sub"
+          style={{ color: "var(--error-color, #c92e2e)" }}
+        >
+          {error ?? "Provider not found"}
+        </p>
       </div>
     );
   }
 
-  const initial = provider.name?.charAt(0).toUpperCase() ?? "?";
-  const certifications = provider.certifications.map((certification) => ({
-    id: certification.id,
-    url: certification.url,
-    mediaType: "IMAGE" as const,
-  }));
+  const handleCertClick = (cert: Certification) => {
+    setPreviewMedia({
+      id: cert.id,
+      url: cert.url,
+      mediaType: "IMAGE",
+    });
+  };
 
   return (
     <div className="dash-page">
       <BackLink href={backLink} label="Back to Bids" />
 
       <div className="profile-card">
-        <div className="profile-header">
-          <div className="avatar">
-            {provider.profileImage ? (
-              <img src={provider.profileImage} alt={provider.name} />
-            ) : (
-              initial
-            )}
-          </div>
-
-          <div>
-            <h1>{provider.name}</h1>
-            {provider.specialty ? <p>{provider.specialty}</p> : null}
-
-            <div className="rating">
-              <RatingStars rating={provider.rating} gap={2} />
-              <span>
-                {provider.rating.toFixed(1)} · {provider.reviewCount} review
-                {provider.reviewCount !== 1 ? "s" : ""}
-              </span>
-            </div>
-          </div>
-        </div>
+        <ProviderHeader provider={provider} />
+        <ProviderInfo provider={provider} />
 
         <div className="profile-body">
-          {provider.bio ? (
-            <section>
-              <h2>About</h2>
-              <p>{provider.bio}</p>
-            </section>
-          ) : null}
+          <CertificationsList
+            certifications={provider.certifications}
+            onCertClick={handleCertClick}
+          />
 
-          {provider.phone ? (
-            <section>
-              <h2>Contact</h2>
-              <p>📞 {provider.phone}</p>
-            </section>
-          ) : null}
-
-          {provider.certifications.length > 0 ? (
-            <section>
-              <h2>Certifications</h2>
-              <div className="cert-grid">
-                {provider.certifications.map((certification, index) => (
-                  <div
-                    key={certification.id}
-                    className="cert-card"
-                    onClick={() => setPreviewMedia(certifications[index])}
-                  >
-                    <img src={certification.url} alt={certification.title} />
-                    <p>{certification.title}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          <section>
-            <h2>Recent Reviews</h2>
-            {reviews.length === 0 ? (
-              <p>No reviews yet.</p>
-            ) : (
-              <div className="reviews">
-                {reviews.map((review, index) => (
-                  <div key={review.id ?? index} className="review-card">
-                    <div className="review-header">
-                      <strong>{review.name}</strong>
-                      <RatingStars rating={review.rating} gap={2} />
-                    </div>
-                    <p>{review.comment}</p>
-                    {review.media.length > 0 ? (
-                      <MediaGallery
-                        items={review.media}
-                        onSelect={(mediaIndex) =>
-                          setPreviewMedia(review.media[mediaIndex])
-                        }
-                        size={100}
-                        rounded={8}
-                      />
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
+          <ReviewsList reviews={reviews} onMediaSelect={setPreviewMedia} />
         </div>
       </div>
 
-      {previewMedia ? (
+      {previewMedia && (
         <MediaPreviewModal
           src={previewMedia.url}
           type={previewMedia.mediaType === "VIDEO" ? "video" : "image"}
           onClose={() => setPreviewMedia(null)}
           lightCloseButton
         />
-      ) : null}
+      )}
 
-      <style jsx>{`
+      <style>{`
         .profile-card {
           background: white;
           border-radius: 16px;
@@ -256,6 +143,9 @@ export default function ProviderProfilePage() {
         .profile-body section {
           margin-bottom: 34px;
         }
+        .profile-body section:last-child {
+          margin-bottom: 0;
+        }
         .profile-body h2 {
           font-size: 1.75rem;
           margin-bottom: 14px;
@@ -300,6 +190,7 @@ export default function ProviderProfilePage() {
         }
         .cert-card:hover {
           transform: translateY(-3px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .cert-card img {
           width: 100%;
@@ -315,6 +206,11 @@ export default function ProviderProfilePage() {
           color: var(--text);
           margin: 0;
         }
+        .dash-page-sub {
+          color: var(--sub);
+          font-size: 0.9rem;
+          padding: 20px 0;
+        }
         @media (max-width: 700px) {
           .profile-header {
             flex-direction: column;
@@ -322,6 +218,14 @@ export default function ProviderProfilePage() {
           }
           .profile-card {
             max-width: 100%;
+          }
+          .cert-grid {
+            grid-template-columns: 1fr 1fr;
+          }
+        }
+        @media (max-width: 450px) {
+          .cert-grid {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>

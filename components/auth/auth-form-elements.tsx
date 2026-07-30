@@ -28,10 +28,16 @@ type AuthFieldProps = {
 export function AuthTabs({ active }: { active: AuthTabValue }) {
   return (
     <div className="auth-tabs">
-      <Link href="/auth/login" className={`auth-tab ${active === "login" ? "active" : ""}`}>
+      <Link
+        href="/auth/login"
+        className={`auth-tab ${active === "login" ? "active" : ""}`}
+      >
         Log in
       </Link>
-      <Link href="/auth/register" className={`auth-tab ${active === "register" ? "active" : ""}`}>
+      <Link
+        href="/auth/register"
+        className={`auth-tab ${active === "register" ? "active" : ""}`}
+      >
         Register
       </Link>
     </div>
@@ -78,7 +84,13 @@ export function AuthField({
   );
 }
 
-export function PasswordRules({ password, rules }: { password: string; rules: PasswordRule[] }) {
+export function PasswordRules({
+  password,
+  rules,
+}: {
+  password: string;
+  rules: PasswordRule[];
+}) {
   const firstFailedRule = rules.find((rule) => !rule.valid);
 
   if (password.length === 0) return null;

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { UploadIcon, StarIcon } from "./icons";
 import type { Profile, Category } from "../types";
 
@@ -8,13 +9,18 @@ interface Props {
   onPhotoChange: (file: File) => void;
 }
 
-export function ProfileSidebar({ profile, categories, profilePhoto, onPhotoChange }: Props) {
+export function ProfileSidebar({
+  profile,
+  categories,
+  profilePhoto,
+  onPhotoChange,
+}: Props) {
   return (
     <div className="ps-left">
       <div className="ps-side-card">
         <div className="ps-avatar">
           {profilePhoto ? (
-            <img src={profilePhoto} alt="Profile" className="ps-avatar-image" />
+            <Image src="" alt="Profile" width={100} height={100} />
           ) : (
             (profile?.name.charAt(0) ?? "M")
           )}
@@ -30,7 +36,9 @@ export function ProfileSidebar({ profile, categories, profilePhoto, onPhotoChang
           <div className="ps-avatar-rating">
             <StarIcon />
             <span>{profile!.avgRating.toFixed(1)}</span>
-            <span className="ps-avatar-reviews">· {profile!.reviewCount} reviews</span>
+            <span className="ps-avatar-reviews">
+              · {profile!.reviewCount} reviews
+            </span>
           </div>
         )}
         <button type="button" className="btn-change-photo">

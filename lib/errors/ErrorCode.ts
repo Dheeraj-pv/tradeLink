@@ -12,7 +12,6 @@ export const ErrorCode = {
   INVALID_2FA_CODE: "E2006",
   INVALID_RESET_LINK: "E2007",
 
-
   // Authorization (3000s)
   ACCESS_DENIED: "E3001",
 
@@ -33,5 +32,4 @@ export const ErrorCode = {
   INTERNAL_SERVER_ERROR: "E9001",
 } as const;
 
-export type ErrorCode =
-  (typeof ErrorCode)[keyof typeof ErrorCode];
+export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

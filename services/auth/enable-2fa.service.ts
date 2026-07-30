@@ -1,9 +1,7 @@
 import { authenticator } from "otplib";
 import { decrypt } from "@/lib/crypto";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
-import {
-  generateBackupCodes,
-} from "@/lib/auth/backup-codes";
+import { generateBackupCodes } from "@/lib/auth/backup-codes";
 import * as authRepository from "@/repositories/auth/auth.repository";
 import { ValidationError } from "@/lib/errors/ValidationError";
 import { withSpan } from "@/lib/tracing";
@@ -46,10 +44,7 @@ export async function enableTwoFactor(code: string): Promise<string[]> {
     await withSpan("Enable 2FA", async (txSpan) => {
       txSpan.setAttribute("backup_codes.count", backupCodes.length);
 
-      await authRepository.enableTwoFactor(
-        currentUser.id,
-        backupCodes
-      );
+      await authRepository.enableTwoFactor(currentUser.id, backupCodes);
     });
 
     span.setAttribute("two_factor.enabled", true);

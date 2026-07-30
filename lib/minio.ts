@@ -26,8 +26,7 @@ export function getS3(): S3Client {
   return globalForS3.s3;
 }
 
-export const JOB_MEDIA_BUCKET =
-  process.env.S3_BUCKET ?? "tradelink-media";
+export const JOB_MEDIA_BUCKET = process.env.S3_BUCKET ?? "tradelink-media";
 
 /**
  * Ensure the bucket exists.

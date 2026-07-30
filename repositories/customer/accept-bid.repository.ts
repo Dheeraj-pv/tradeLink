@@ -1,7 +1,5 @@
 import { getPrisma } from "@/lib/prisma";
 
-
-
 export async function findJobWithBids(jobId: string) {
   const prisma = getPrisma();
   return prisma.job.findUnique({

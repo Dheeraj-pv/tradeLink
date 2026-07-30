@@ -11,10 +11,7 @@ type RouteParams = {
   }>;
 };
 
-export async function GET(
-  req: NextRequest,
-  { params }: RouteParams,
-) {
+export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
     return await getCustomerJobController(req, { params });
   } catch (error) {
@@ -22,10 +19,7 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: RouteParams,
-) {
+export async function PATCH(req: NextRequest, { params }: RouteParams) {
   try {
     return await cancelJobController(req, { params });
   } catch (error) {

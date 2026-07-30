@@ -29,11 +29,19 @@ export function ProfileForm({
       <div className="ps-field-row">
         <div className="ps-field">
           <label>Full Name</label>
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)} />
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
         </div>
         <div className="ps-field">
           <label>Phone Number</label>
-          <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
         </div>
       </div>
       <div className="ps-field">
@@ -48,7 +56,7 @@ export function ProfileForm({
                   setCategoryIds((prev: number[]) =>
                     prev.includes(category.id)
                       ? prev.filter((id) => id !== category.id)
-                      : [...prev, category.id]
+                      : [...prev, category.id],
                   );
                 }}
               />

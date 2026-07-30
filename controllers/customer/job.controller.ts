@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { JobStatus } from "@prisma/client";
 import { ValidationError } from "@/lib/errors/ValidationError";
 import { createJobSchema } from "@/lib/job/schemas";
-import {
-  createJob,
-  getCustomerJobs,
-} from "@/services/customer/job.service";
+import { createJob, getCustomerJobs } from "@/services/customer/job.service";
 import { ErrorCode } from "@/lib/errors/ErrorCode";
 
 export async function getCustomerJobsController(req: NextRequest) {

@@ -1,4 +1,5 @@
-"use client";
+import Image from "next/image";
+("use client");
 
 import { useState } from "react";
 import { toast } from "sonner";
@@ -208,7 +209,12 @@ export default function TwoFactorSetup({
 
           {qrCodeDataUrl && (
             <div className="tfa-qr">
-              <img src={qrCodeDataUrl} alt="Scan with your authenticator app" />
+              <Image
+                src=""
+                alt="Scan with your authenticator app"
+                width={100}
+                height={100}
+              />
             </div>
           )}
 

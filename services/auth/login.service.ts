@@ -22,9 +22,7 @@ interface LoginResult {
   };
 }
 
-export async function login(
-  input: LoginInput,
-): Promise<LoginResult> {
+export async function login(input: LoginInput): Promise<LoginResult> {
   return withSpan("Login User", async (span) => {
     const normalizedEmail = input.email.toLowerCase().trim();
 
@@ -37,27 +35,18 @@ export async function login(
     if (!user) {
       span.setAttribute("failure.reason", "user_not_found");
 
-      logger.warn(
-        { email: normalizedEmail },
-        "Login failed: user not found",
-      );
+      logger.warn({ email: normalizedEmail }, "Login failed: user not found");
 
       throw new AuthenticationError(ErrorCode.INVALID_CREDENTIALS);
     }
 
     span.setAttribute("user.id", user.id);
     span.setAttribute("user.role", user.userRole);
-    span.setAttribute(
-      "auth.2fa_enabled",
-      user.twoFactorEnabled,
-    );
+    span.setAttribute("auth.2fa_enabled", user.twoFactorEnabled);
 
-    const passwordValid = await withSpan(
-      "Verify Password",
-      async () => {
-        return verifyPassword(input.password, user.password);
-      },
-    );
+    const passwordValid = await withSpan("Verify Password", async () => {
+      return verifyPassword(input.password, user.password);
+    });
 
     if (!passwordValid) {
       span.setAttribute("failure.reason", "invalid_password");
@@ -83,10 +72,7 @@ export async function login(
         },
       );
 
-      logger.info(
-        { userId: user.id },
-        "Password verified, awaiting 2FA code",
-      );
+      logger.info({ userId: user.id }, "Password verified, awaiting 2FA code");
 
       return {
         requiresTwoFactor: true,

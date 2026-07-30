@@ -32,33 +32,20 @@ export async function resetPassword({
   isBackupCode = false,
 }: ResetPasswordInput): Promise<ResetPasswordResult> {
   return withSpan("Reset Password", async (span) => {
-    span.setAttribute(
-      "auth.method",
-      isBackupCode ? "backup_code" : "totp",
-    );
+    span.setAttribute("auth.method", isBackupCode ? "backup_code" : "totp");
 
-    const resetToken = await withSpan(
-      "Load Password Reset Token",
-      async () => {
-        return authRepository.findPasswordResetToken(
-          hashToken(token),
-        );
-      },
-    );
+    const resetToken = await withSpan("Load Password Reset Token", async () => {
+      return authRepository.findPasswordResetToken(hashToken(token));
+    });
 
     if (!resetToken) {
       span.setAttribute("failure.reason", "invalid_reset_token");
 
-      throw new NotFoundError(
-        ErrorCode.INVALID_RESET_LINK,
-      );
+      throw new NotFoundError(ErrorCode.INVALID_RESET_LINK);
     }
 
     span.setAttribute("user.id", resetToken.userId);
-    span.setAttribute(
-      "auth.2fa_enabled",
-      resetToken.user.twoFactorEnabled,
-    );
+    span.setAttribute("auth.2fa_enabled", resetToken.user.twoFactorEnabled);
 
     if (resetToken.expiresAt < new Date()) {
       span.setAttribute("failure.reason", "expired_reset_token");
@@ -83,22 +70,16 @@ export async function resetPassword({
         throw new ValidationError(ErrorCode.INVALID_INPUT);
       }
 
-      const valid = await withSpan(
-        "Verify Authentication Code",
-        async () => {
-          if (isBackupCode) {
-            return verifyBackupCode(
-              resetToken.userId,
-              totpCode,
-            );
-          }
+      const valid = await withSpan("Verify Authentication Code", async () => {
+        if (isBackupCode) {
+          return verifyBackupCode(resetToken.userId, totpCode);
+        }
 
-          return authenticator.verify({
-            token: totpCode,
-            secret: decrypt(secret),
-          });
-        },
-      );
+        return authenticator.verify({
+          token: totpCode,
+          secret: decrypt(secret),
+        });
+      });
 
       if (!valid) {
         span.setAttribute("failure.reason", "invalid_2fa_code");
@@ -107,18 +88,12 @@ export async function resetPassword({
       }
     }
 
-    const hashedPassword = await withSpan(
-      "Hash Password",
-      async () => {
-        return hashPassword(password);
-      },
-    );
+    const hashedPassword = await withSpan("Hash Password", async () => {
+      return hashPassword(password);
+    });
 
     await withSpan("Update Password", async () => {
-      await authRepository.resetPassword(
-        resetToken.userId,
-        hashedPassword,
-      );
+      await authRepository.resetPassword(resetToken.userId, hashedPassword);
     });
 
     return {
@@ -130,35 +105,20 @@ export async function resetPassword({
 export async function validateResetToken(
   token: string,
 ): Promise<ValidateResetTokenResult> {
-  return withSpan(
-    "Validate Password Reset Token",
-    async (span) => {
-      const resetToken = await withSpan(
-        "Load Password Reset Token",
-        async () => {
-          return authRepository.validatePasswordResetToken(
-            hashToken(token),
-          );
-        },
-      );
+  return withSpan("Validate Password Reset Token", async (span) => {
+    const resetToken = await withSpan("Load Password Reset Token", async () => {
+      return authRepository.validatePasswordResetToken(hashToken(token));
+    });
 
-      if (
-        !resetToken ||
-        resetToken.expiresAt < new Date()
-      ) {
-        span.setAttribute(
-          "failure.reason",
-          "invalid_or_expired_token",
-        );
+    if (!resetToken || resetToken.expiresAt < new Date()) {
+      span.setAttribute("failure.reason", "invalid_or_expired_token");
 
-        throw new ValidationError(ErrorCode.INVALID_INPUT);
-      }
+      throw new ValidationError(ErrorCode.INVALID_INPUT);
+    }
 
-      return {
-        valid: true,
-        requiresTwoFactor:
-          resetToken.user.twoFactorEnabled,
-      };
-    },
-  );
+    return {
+      valid: true,
+      requiresTwoFactor: resetToken.user.twoFactorEnabled,
+    };
+  });
 }

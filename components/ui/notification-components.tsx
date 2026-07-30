@@ -83,7 +83,9 @@ export function NotificationsList<T extends BaseNotification>({
           font-weight: 600;
           font-family: inherit;
           cursor: pointer;
-          transition: border-color 0.15s, background 0.15s;
+          transition:
+            border-color 0.15s,
+            background 0.15s;
           white-space: nowrap;
         }
         .btn-mark-all:hover:not(:disabled) {

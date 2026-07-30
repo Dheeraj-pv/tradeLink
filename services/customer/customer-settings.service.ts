@@ -76,9 +76,7 @@ export async function getCustomerSettings() {
   });
 }
 
-export async function updateCustomerProfile(
-  input: UpdateProfileInput,
-) {
+export async function updateCustomerProfile(input: UpdateProfileInput) {
   return withSpan("Update Customer Profile", async (span) => {
     const user = await withSpan("Authenticate User", async () => {
       return (await getCurrentUser())!;
@@ -110,9 +108,7 @@ export async function updateCustomerProfile(
   });
 }
 
-export async function updateCustomerPassword(
-  input: UpdatePasswordInput,
-) {
+export async function updateCustomerPassword(input: UpdatePasswordInput) {
   return withSpan("Update Customer Password", async (span) => {
     const user = await withSpan("Authenticate User", async () => {
       return (await getCurrentUser())!;
@@ -137,21 +133,12 @@ export async function updateCustomerPassword(
       throw new NotFoundError(ErrorCode.USER_NOT_FOUND);
     }
 
-    const valid = await withSpan(
-      "Verify Current Password",
-      async () => {
-        return verifyPassword(
-          input.currentPassword,
-          dbUser.password,
-        );
-      },
-    );
+    const valid = await withSpan("Verify Current Password", async () => {
+      return verifyPassword(input.currentPassword, dbUser.password);
+    });
 
     if (!valid) {
-      span.setAttribute(
-        "failure.reason",
-        "invalid_current_password",
-      );
+      span.setAttribute("failure.reason", "invalid_current_password");
 
       logger.warn(
         {
@@ -160,9 +147,7 @@ export async function updateCustomerPassword(
         "Customer provided incorrect current password",
       );
 
-      throw new AuthenticationError(
-        ErrorCode.CURRENT_PASSWORD_MISMATCH,
-      );
+      throw new AuthenticationError(ErrorCode.CURRENT_PASSWORD_MISMATCH);
     }
 
     if (dbUser.twoFactorEnabled) {
@@ -175,12 +160,7 @@ export async function updateCustomerPassword(
       const verified = await withSpan(
         "Verify Two-Factor Authentication",
         async () => {
-          if (
-            await verifyBackupCode(
-              user.id,
-              input.twoFactorCode!,
-            )
-          ) {
+          if (await verifyBackupCode(user.id, input.twoFactorCode!)) {
             return true;
           }
 
@@ -201,9 +181,7 @@ export async function updateCustomerPassword(
           "Customer supplied an invalid 2FA code",
         );
 
-        throw new AuthenticationError(
-          ErrorCode.INVALID_TOKEN,
-        );
+        throw new AuthenticationError(ErrorCode.INVALID_TOKEN);
       }
     }
 
@@ -212,10 +190,7 @@ export async function updateCustomerPassword(
     });
 
     await withSpan("Update Password", async () => {
-      await customerSettingsRepository.updatePassword(
-        user.id,
-        hashed,
-      );
+      await customerSettingsRepository.updatePassword(user.id, hashed);
     });
 
     logger.info(

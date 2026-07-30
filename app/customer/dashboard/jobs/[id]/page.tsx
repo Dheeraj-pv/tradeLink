@@ -1,319 +1,42 @@
 "use client";
 
-import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link"; // ✅ Add this import
 import { toast } from "sonner";
-import {
-  BriefcaseIcon,
-  DollarIcon,
-  PinIcon,
-  XIcon,
-} from "@/components/ui/icons";
+import { BriefcaseIcon, DollarIcon, PinIcon } from "@/components/ui/icons";
 import {
   JobInfoGrid,
   JobProgress,
   JobStatusMeta,
 } from "@/components/ui/job-components";
 import {
-  FileList,
-  FilePreviewModal,
-  FileUploadDropzone,
   MediaGallery,
   MediaPreviewModal,
-  type ServerMediaItem,
 } from "@/components/ui/media-components";
 import { BackLink } from "@/components/ui/page-components";
-import { RatingInputStars } from "@/components/ui/review-components";
-import { getUserFriendlyErrorMessage } from "@/lib/errors/error-message";
-
-type Job = {
-  id: string;
-  title: string;
-  description: string;
-  address: string;
-  status: string;
-  category: string;
-  bidCount: number;
-  createdAt: string;
-  providerName?: string;
-  providerCategory?: string;
-  providerId?: string;
-};
-
-const STATUS_BADGE: Record<string, string> = {
-  OPEN: "badge-open",
-  ASSIGNED: "badge-assigned",
-  COMPLETED: "badge-completed",
-  IN_PROGRESS: "badge-assigned",
-  AWAITING_APPROVAL: "badge-assigned",
-  CANCELLED: "badge-cancelled",
-};
-
-const PROGRESS_STEPS = [
-  { label: "Assigned", sub: "Provider confirmed" },
-  { label: "In Progress", sub: "Work underway" },
-  { label: "Completed", sub: "Job finished" },
-];
-
-function currentStageIndex(status: string) {
-  if (status === "ASSIGNED") return 0;
-  if (status === "IN_PROGRESS" || status === "AWAITING_APPROVAL") return 1;
-  if (status === "COMPLETED") return 2;
-  return -1;
-}
-
-function shouldShowProgress(status: string) {
-  return ["ASSIGNED", "IN_PROGRESS", "COMPLETED", "AWAITING_APPROVAL"].includes(
-    status,
-  );
-}
-
-function ReviewModal({
-  job,
-  onClose,
-  onSubmitted,
-}: {
-  job: Job;
-  onClose: () => void;
-  onSubmitted: () => void;
-}) {
-  const [rating, setRating] = useState(5);
-  const [comment, setComment] = useState("");
-  const [files, setFiles] = useState<File[]>([]);
-  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  function addFiles(incoming: File[]) {
-    setFiles((prev) => {
-      const existing = new Set(prev.map((file) => `${file.name}-${file.size}`));
-      return [
-        ...prev,
-        ...incoming.filter((file) => !existing.has(`${file.name}-${file.size}`)),
-      ];
-    });
-  }
-
-  function removeFile(index: number) {
-    setFiles((prev) => prev.filter((_, fileIndex) => fileIndex !== index));
-  }
-
-  async function handleSubmit() {
-    setSubmitting(true);
-
-    try {
-      const approveRes = await fetch(`/api/customer/jobs/${job.id}/approve`, {
-        method: "PATCH",
-      });
-
-      if (!approveRes.ok) {
-        const data = await approveRes.json();
-        toast.error(getUserFriendlyErrorMessage(data));
-        return;
-      }
-
-      const reviewRes = await fetch(`/api/customer/jobs/${job.id}/review`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rating, comment }),
-      });
-
-      if (!reviewRes.ok) {
-        const data = await reviewRes.json();
-        toast.error(getUserFriendlyErrorMessage(data));
-        return;
-      }
-
-      if (files.length > 0) {
-        const formData = new FormData();
-        files.forEach((file) => formData.append("media", file));
-
-        const mediaRes = await fetch(`/api/customer/jobs/${job.id}/review/media`, {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!mediaRes.ok) {
-          const data = await mediaRes.json();
-          toast.warning(
-            `Review submitted but photo upload failed: ${data.error ?? "Unknown error"}`,
-          );
-        }
-      }
-
-      onSubmitted();
-    } catch {
-      toast.error("Network error — please try again.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <>
-      <div className="modal-backdrop" onClick={onClose} />
-      <div className="modal-wrap" role="dialog" aria-modal="true">
-        <div className="modal-card">
-          <button className="modal-close" onClick={onClose} aria-label="Close">
-            <XIcon width={18} height={18} />
-          </button>
-
-          <h2 className="modal-title">Leave a Review</h2>
-          <p className="modal-sub">
-            How did {job.providerName ?? "the provider"} do?
-          </p>
-
-          <div className="modal-provider">
-            <div className="modal-avatar">
-              {(job.providerName ?? "P").charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <p className="modal-provider-name">
-                {job.providerName ?? "Provider"}
-              </p>
-              <p className="modal-provider-trade">
-                {job.providerCategory ?? job.category}
-              </p>
-            </div>
-          </div>
-
-          <div className="modal-field">
-            <label className="modal-label">Rating</label>
-            <RatingInputStars rating={rating} onRate={setRating} />
-          </div>
-
-          <div className="modal-field">
-            <label className="modal-label">Comments</label>
-            <textarea
-              className="modal-textarea"
-              placeholder="Share your experience with this provider…"
-              rows={4}
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-            />
-          </div>
-
-          <div className="modal-field">
-            <label className="modal-label">
-              Photos{" "}
-              <span className="optional-text">optional</span>
-            </label>
-
-            <FileUploadDropzone
-              inputId="review-photo"
-              onFilesAdded={addFiles}
-              onInvalidFile={(message) => toast.error(message)}
-              prompt="Drag photos or click to upload"
-              hint="JPEG, PNG, WebP, GIF, MP4, WebM · Max 10 MB"
-              compact
-            />
-
-            {files.length > 0 ? (
-              <FileList
-                files={files}
-                onPreview={setPreviewIndex}
-                onRemove={removeFile}
-                compact
-              />
-            ) : null}
-          </div>
-
-          <button
-            className="btn-submit-review"
-            onClick={handleSubmit}
-            disabled={submitting || rating === 0}
-          >
-            {submitting ? "Submitting…" : "Submit Review"}
-          </button>
-        </div>
-      </div>
-
-      {previewIndex !== null ? (
-        <FilePreviewModal
-          file={files[previewIndex]}
-          onClose={() => setPreviewIndex(null)}
-          zIndex={200}
-        />
-      ) : null}
-    </>
-  );
-}
+import { useJobDetail } from "./hooks/useJobDetail";
+import { ReviewModal } from "./components/ReviewModal";
+import { JobActions } from "./components/JobActions";
+import { STATUS_BADGE, PROGRESS_STEPS } from "./constants";
+import { shouldShowProgress, currentStageIndex } from "./utils/jobHelpers";
 
 export default function JobDetailPage() {
   const params = useParams<{ id: string }>();
-  const jobId = params.id;
+  const jobId = params?.id;
 
-  const [job, setJob] = useState<Job | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [cancelling, setCancelling] = useState(false);
-  const [showReview, setShowReview] = useState(false);
-  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
-  const [media, setMedia] = useState<ServerMediaItem[]>([]);
+  const {
+    job,
+    loading,
+    media,
+    cancelling,
+    previewIndex,
+    setPreviewIndex,
+    handleCancel,
+    refetch,
+  } = useJobDetail(jobId);
 
-  const fetchJob = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`/api/customer/jobs/${jobId}`);
-      const response = await res.json();
-
-      if (!res.ok) {
-        toast.error(getUserFriendlyErrorMessage(response));
-        return;
-      }
-
-      setJob(response.data.job);
-    } catch {
-      toast.error("Network error — please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, [jobId]);
-
-  const fetchMedia = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/customer/jobs/${jobId}/media`);
-      if (!res.ok) return;
-      const response = await res.json();
-      setMedia(response.data.media);
-    } catch (error) {
-      console.error(error);
-    }
-  }, [jobId]);
-
-  useEffect(() => {
-    void fetchJob();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void fetchMedia();
-  }, [fetchJob, fetchMedia]);
-
-  async function handleCancel() {
-    if (!confirm("Are you sure you want to cancel this job?")) return;
-
-    setCancelling(true);
-    try {
-      const res = await fetch(`/api/customer/jobs/${jobId}`, {
-        method: "PATCH",
-      });
-      const response = await res.json();
-
-      if (!res.ok) {
-        toast.error(getUserFriendlyErrorMessage(response));
-        return;
-      }
-
-      setJob(response.data.job);
-    } catch {
-      toast.error("Network error — please try again.");
-    } finally {
-      setCancelling(false);
-    }
-  }
-
-  function handleReviewSubmitted() {
-    setShowReview(false);
-    setJob((prev) => (prev ? { ...prev, status: "COMPLETED" } : prev));
-    toast.success("Review submitted! Thank you.");
-  }
+  const [showReview, setShowReview] = useState<boolean>(false);
 
   if (loading) {
     return (
@@ -323,20 +46,58 @@ export default function JobDetailPage() {
     );
   }
 
-  if (!job) return null;
+  if (!job) {
+    return (
+      <div className="dash-page">
+        <div className="detail-loading">Job not found</div>
+      </div>
+    );
+  }
 
   const badgeClass = STATUS_BADGE[job.status] ?? "badge-open";
   const isOpen = job.status === "OPEN";
+  const isAwaitingApproval = job.status === "AWAITING_APPROVAL";
+  const showProgress = shouldShowProgress(job.status);
+  const currentIndex = currentStageIndex(job.status);
+
+  const handleReviewSubmitted = (): void => {
+    setShowReview(false);
+    void refetch();
+    toast.success("Review submitted! Thank you.");
+  };
+
+  const handleApprove = (): void => {
+    setShowReview(true);
+  };
+
+  // Prepare info grid items
+  const infoItems = [
+    {
+      label: "Address",
+      value: job.address,
+      icon: <PinIcon width={14} height={14} />,
+    },
+    {
+      label: "Category",
+      value: job.category,
+      icon: <BriefcaseIcon width={14} height={14} />,
+    },
+    {
+      label: "Bids Received",
+      value: `${job.bidCount} ${job.bidCount === 1 ? "bid" : "bids"}`,
+      icon: <DollarIcon width={14} height={14} />,
+    },
+  ];
 
   return (
     <div className="dash-page">
-      {showReview ? (
+      {showReview && (
         <ReviewModal
           job={job}
           onClose={() => setShowReview(false)}
           onSubmitted={handleReviewSubmitted}
         />
-      ) : null}
+      )}
 
       <BackLink href="/customer/dashboard" label="Back" />
 
@@ -344,23 +105,14 @@ export default function JobDetailPage() {
         <h1 className="dash-page-title" style={{ marginBottom: 0 }}>
           {job.title}
         </h1>
-        {isOpen ? (
-          <div className="detail-actions">
-            <Link
-              href={`/customer/dashboard/jobs/${job.id}/edit`}
-              className="btn-edit"
-            >
-              Edit
-            </Link>
-            <button
-              className="btn-cancel-job"
-              onClick={handleCancel}
-              disabled={cancelling}
-            >
-              {cancelling ? "Cancelling…" : "Cancel Job"}
-            </button>
-          </div>
-        ) : null}
+        <JobActions
+          jobId={job.id}
+          isOpen={isOpen}
+          isAwaitingApproval={isAwaitingApproval}
+          cancelling={cancelling}
+          onCancel={handleCancel}
+          onApprove={handleApprove}
+        />
       </div>
 
       <JobStatusMeta
@@ -370,77 +122,61 @@ export default function JobDetailPage() {
         formatStatus
       />
 
-      <JobInfoGrid
-        items={[
-          {
-            label: "Address",
-            value: job.address,
-            icon: <PinIcon width={14} height={14} />,
-          },
-          {
-            label: "Category",
-            value: job.category,
-            icon: <BriefcaseIcon width={14} height={14} />,
-          },
-          {
-            label: "Bids Received",
-            value: `${job.bidCount} ${job.bidCount === 1 ? "bid" : "bids"}`,
-            icon: <DollarIcon width={14} height={14} />,
-          },
-        ]}
-      />
+      <JobInfoGrid items={infoItems} />
 
       <div className="detail-card">
         <h2 className="detail-card-title">Description</h2>
         <p className="detail-card-text">{job.description}</p>
-        {shouldShowProgress(job.status) ? (
+        {showProgress && currentIndex >= 0 && (
           <div style={{ marginTop: 28 }}>
-            <JobProgress
-              steps={PROGRESS_STEPS}
-              currentIndex={currentStageIndex(job.status)}
-            />
+            <JobProgress steps={PROGRESS_STEPS} currentIndex={currentIndex} />
           </div>
-        ) : null}
+        )}
       </div>
 
-      {media.length > 0 ? (
+      {media.length > 0 && (
         <div className="detail-card">
           <h2 className="detail-card-title">Media</h2>
-          <MediaGallery items={media} onSelect={setPreviewIndex} />
+          <MediaGallery
+            items={media}
+            onSelect={(index) => setPreviewIndex(index)}
+          />
         </div>
-      ) : null}
+      )}
 
-      {previewIndex !== null ? (
+      {previewIndex !== null && media[previewIndex] && (
         <MediaPreviewModal
           src={media[previewIndex].url}
           type={media[previewIndex].mediaType === "VIDEO" ? "video" : "image"}
           onClose={() => setPreviewIndex(null)}
           zIndex={9999}
         />
-      ) : null}
+      )}
 
-      {job.bidCount > 0 && job.status === "OPEN" ? (
+      {/* View All Bids - Now at the bottom */}
+      {isOpen && job.bidCount > 0 && (
         <Link
           href={`/customer/dashboard/jobs/${job.id}/bids`}
           className="btn-view-bids"
         >
           View All Bids ({job.bidCount})
         </Link>
-      ) : null}
+      )}
 
-      {job.status === "AWAITING_APPROVAL" ? (
+      {/* Approval box at the bottom */}
+      {isAwaitingApproval && (
         <div className="approval-box">
           <p>
             The provider has marked this job as completed. Please verify the
             work before approving.
           </p>
-          <button className="btn-approve" onClick={() => setShowReview(true)}>
+          <button className="btn-approve" onClick={handleApprove}>
             Approve Completion
           </button>
         </div>
-      ) : null}
+      )}
 
-      <style jsx>{`
+      <style>{`
         .detail-loading {
           padding: 40px;
           text-align: center;
@@ -559,6 +295,8 @@ export default function JobDetailPage() {
         .btn-approve:hover {
           background: #15803d;
         }
+
+        /* Modal styles */
         .modal-backdrop {
           position: fixed;
           inset: 0;
@@ -700,6 +438,7 @@ export default function JobDetailPage() {
           opacity: 0.6;
           cursor: not-allowed;
         }
+
         @media (max-width: 700px) {
           .detail-card {
             padding: 22px;

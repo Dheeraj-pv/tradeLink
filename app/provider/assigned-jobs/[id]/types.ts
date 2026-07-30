@@ -1,4 +1,5 @@
-export type JobStatus = "ASSIGNED" | "IN_PROGRESS" | "AWAITING_APPROVAL" | "COMPLETED";
+export type JobStatus =
+  "ASSIGNED" | "IN_PROGRESS" | "AWAITING_APPROVAL" | "COMPLETED";
 
 export type Job = {
   id: string;

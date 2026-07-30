@@ -148,4 +148,3 @@ export async function cancelJob(id: string) {
     return updated;
   });
 }
-

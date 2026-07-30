@@ -1,7 +1,5 @@
 import { getPrisma } from "@/lib/prisma";
 
- 
-
 export async function findJobBids(jobId: string) {
   const prisma = getPrisma();
   return prisma.bid.findMany({

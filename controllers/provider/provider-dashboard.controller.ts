@@ -9,9 +9,7 @@ const querySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(5),
 });
 
-export async function getProviderDashboardController(
-  req: NextRequest,
-) {
+export async function getProviderDashboardController(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
 
   const parsed = querySchema.safeParse({

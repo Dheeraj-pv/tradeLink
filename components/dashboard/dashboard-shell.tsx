@@ -4,7 +4,12 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useFcmToken } from "@/app/hooks/useFcmTokens";
-import { HomeIcon, KeyIcon, LogoutIcon, SettingsIcon } from "@/components/ui/icons";
+import {
+  HomeIcon,
+  KeyIcon,
+  LogoutIcon,
+  SettingsIcon,
+} from "@/components/ui/icons";
 
 type DashboardShellProps = {
   children: React.ReactNode;
@@ -38,7 +43,8 @@ export function DashboardShell({
   const [unreadCount, setUnreadCount] = useState(0);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(
-    pathname.startsWith(`/${role}/profile`) || pathname.startsWith(`/${role}/security`),
+    pathname.startsWith(`/${role}/profile`) ||
+      pathname.startsWith(`/${role}/security`),
   );
 
   useEffect(() => {
@@ -79,7 +85,7 @@ export function DashboardShell({
   }, []);
 
   useEffect(() => {
-    let active = true;
+    const active = true;
 
     async function loadUser() {
       try {
@@ -221,25 +227,48 @@ export function DashboardShell({
           </div>
 
           <nav className="sb-nav">
-            {navItemsWithBadges.map(({ href, label, icon: Icon, badge = 0 }) => (
-              <Link key={href} href={href} className={`sb-link ${isActive(href) ? "active" : ""}`}>
-                <Icon />
-                {label}
-                {badge > 0 && <span className="sb-badge">{badge}</span>}
-              </Link>
-            ))}
+            {navItemsWithBadges.map(
+              ({ href, label, icon: Icon, badge = 0 }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`sb-link ${isActive(href) ? "active" : ""}`}
+                >
+                  <Icon />
+                  {label}
+                  {badge > 0 && <span className="sb-badge">{badge}</span>}
+                </Link>
+              ),
+            )}
 
             {extraSettings.length > 0 && (
               <>
-                <button className={`sb-link ${pathname.startsWith(`${settingsHrefBase}/profile`) || pathname.startsWith(`${settingsHrefBase}/security`) ? "active" : ""}`} onClick={() => setSettingsOpen((v) => !v)}>
+                <button
+                  className={`sb-link ${pathname.startsWith(`${settingsHrefBase}/profile`) || pathname.startsWith(`${settingsHrefBase}/security`) ? "active" : ""}`}
+                  onClick={() => setSettingsOpen((v) => !v)}
+                >
                   <SettingsIcon />
                   <span>Settings</span>
-                  <span style={{ marginLeft: "auto", transition: "transform .2s", transform: settingsOpen ? "rotate(90deg)" : "rotate(0deg)" }}>▶</span>
+                  <span
+                    style={{
+                      marginLeft: "auto",
+                      transition: "transform .2s",
+                      transform: settingsOpen
+                        ? "rotate(90deg)"
+                        : "rotate(0deg)",
+                    }}
+                  >
+                    ▶
+                  </span>
                 </button>
                 {settingsOpen && (
                   <div className="sb-submenu">
                     {extraSettings.map((item) => (
-                      <Link key={item.href} href={item.href} className={`sb-sublink ${isActive(item.href) ? "active" : ""}`}>
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`sb-sublink ${isActive(item.href) ? "active" : ""}`}
+                      >
                         {item.label}
                       </Link>
                     ))}

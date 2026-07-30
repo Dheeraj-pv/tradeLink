@@ -33,9 +33,7 @@ export async function findOwnedCertification(
   });
 }
 
-export async function deleteCertification(
-  certificationId: string,
-) {
+export async function deleteCertification(certificationId: string) {
   const prisma = getPrisma();
 
   return prisma.providerCertification.delete({

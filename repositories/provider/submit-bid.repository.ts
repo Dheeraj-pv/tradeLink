@@ -16,10 +16,7 @@ export async function findJob(jobId: string) {
   });
 }
 
-export async function findExistingBid(
-  providerId: string,
-  jobId: string,
-) {
+export async function findExistingBid(providerId: string, jobId: string) {
   const prisma = getPrisma();
 
   return prisma.bid.findFirst({
@@ -30,9 +27,7 @@ export async function findExistingBid(
   });
 }
 
-export async function createBid(
-  data: Prisma.BidUncheckedCreateInput,
-) {
+export async function createBid(data: Prisma.BidUncheckedCreateInput) {
   const prisma = getPrisma();
 
   return prisma.bid.create({

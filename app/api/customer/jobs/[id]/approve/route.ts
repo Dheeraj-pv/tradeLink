@@ -8,10 +8,7 @@ type RouteParams = {
   }>;
 };
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: RouteParams,
-) {
+export async function PATCH(req: NextRequest, { params }: RouteParams) {
   try {
     return await approveJobCompletionController(req, { params });
   } catch (error) {

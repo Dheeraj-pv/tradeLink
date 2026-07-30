@@ -28,10 +28,7 @@ export async function getTwoFactorSecret(userId: string) {
   });
 }
 
-export async function enableTwoFactor(
-  userId: string,
-  backupCodes: string[],
-) {
+export async function enableTwoFactor(userId: string, backupCodes: string[]) {
   const prisma = getPrisma();
 
   await prisma.$transaction([
@@ -256,10 +253,7 @@ export async function deletePasswordResetToken(tokenId: string) {
   });
 }
 
-export async function resetPassword(
-  userId: string,
-  hashedPassword: string,
-) {
+export async function resetPassword(userId: string, hashedPassword: string) {
   const prisma = getPrisma();
 
   await prisma.$transaction([

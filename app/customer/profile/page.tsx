@@ -1,75 +1,12 @@
-// app/customer/profile/page.tsx
-
 "use client";
 
-import { toast } from "sonner";
-import { useEffect, useState } from "react";
 import { PageHeader, SettingsCard } from "@/components/ui/page-components";
-import { getUserFriendlyErrorMessage } from "@/lib/errors/error-message";
+import { useCustomerProfile } from "./hooks/useCustomerProfile";
+import { ProfileForm } from "./components/ProfileForm";
 
 export default function ProfilePage() {
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-
-  const fetchProfile = async () => {
-    try {
-      const res = await fetch("/api/customer/settings");
-      const response = await res.json();
-
-      if (!res.ok) {
-        toast.error(getUserFriendlyErrorMessage(response));
-        return;
-      }
-
-      setFullName(response.data.profile.name);
-      setEmail(response.data.profile.email);
-      setPhone(response.data.profile.phone ?? "");
-    } catch {
-      toast.error("Network error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void fetchProfile();
-  }, []);
-
-  async function handleSave() {
-    setSaving(true);
-
-    try {
-      const res = await fetch("/api/customer/settings", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          action: "profile",
-          name: fullName,
-          phone,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        toast.error(getUserFriendlyErrorMessage(data));
-        return;
-      }
-
-      toast.success("Profile updated successfully.");
-    } catch {
-      toast.error("Network error");
-    } finally {
-      setSaving(false);
-    }
-  }
+  const { profile, loading, saving, updateProfile, saveProfile } =
+    useCustomerProfile();
 
   if (loading) {
     return (
@@ -81,39 +18,77 @@ export default function ProfilePage() {
 
   return (
     <div className="dash-page">
-      <PageHeader title="Profile" subtitle="Manage your personal information." />
+      <PageHeader
+        title="Profile"
+        subtitle="Manage your personal information."
+      />
 
       <SettingsCard title="Personal Information">
-        <div className="form-field">
-          <label>Full Name</label>
-
-          <input
-            type="text"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-          />
-        </div>
-
-        <div className="form-field">
-          <label>Email Address</label>
-
-          <input type="email" value={email} disabled />
-        </div>
-
-        <div className="form-field">
-          <label>Phone Number</label>
-
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-        </div>
-
-        <button className="btn-save" onClick={handleSave} disabled={saving}>
-          {saving ? "Saving..." : "Save Changes"}
-        </button>
+        <ProfileForm
+          profile={profile}
+          onUpdate={updateProfile}
+          onSave={saveProfile}
+          saving={saving}
+        />
       </SettingsCard>
+
+      <style>{`
+        .form-field {
+          margin-bottom: 20px;
+        }
+        .form-field label {
+          display: block;
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: var(--text);
+          margin-bottom: 8px;
+        }
+        .form-field input {
+          width: 100%;
+          padding: 12px 14px;
+          border: 1.5px solid var(--border);
+          border-radius: 9px;
+          font-size: 0.9rem;
+          font-family: inherit;
+          background: var(--white);
+          color: var(--text);
+          outline: none;
+          transition: border-color 0.15s;
+        }
+        .form-field input:focus:not(.input-disabled) {
+          border-color: var(--navy);
+        }
+        .form-field input.input-disabled {
+          background: var(--bg-subtle);
+          color: var(--sub);
+          cursor: not-allowed;
+          opacity: 0.7;
+        }
+        .field-help {
+          font-size: 0.78rem;
+          color: var(--sub);
+          margin-top: 6px;
+        }
+        .btn-save {
+          padding: 12px 28px;
+          border: none;
+          border-radius: 9px;
+          background: var(--navy);
+          color: #fff;
+          font-size: 0.9rem;
+          font-weight: 600;
+          font-family: inherit;
+          cursor: pointer;
+          transition: background 0.15s, opacity 0.15s;
+        }
+        .btn-save:hover:not(:disabled) {
+          background: #253460;
+        }
+        .btn-save:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+      `}</style>
     </div>
   );
 }

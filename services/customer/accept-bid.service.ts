@@ -71,7 +71,7 @@ export async function acceptBid(jobId: string, bidId: string) {
         "Bid acceptance failed: job already assigned",
       );
 
-     throw new ValidationError(ErrorCode.INVALID_INPUT);
+      throw new ValidationError(ErrorCode.INVALID_INPUT);
     }
 
     const acceptedBid = job.bids.find((bid) => bid.id === bidId);

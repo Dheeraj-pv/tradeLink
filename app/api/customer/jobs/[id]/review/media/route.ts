@@ -11,10 +11,7 @@ type RouteParams = {
   }>;
 };
 
-export async function POST(
-  req: NextRequest,
-  { params }: RouteParams,
-) {
+export async function POST(req: NextRequest, { params }: RouteParams) {
   try {
     return await uploadReviewMediaController(req, { params });
   } catch (error) {
@@ -22,10 +19,7 @@ export async function POST(
   }
 }
 
-export async function GET(
-  req: NextRequest,
-  { params }: RouteParams,
-) {
+export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
     return await getReviewMediaController(req, { params });
   } catch (error) {

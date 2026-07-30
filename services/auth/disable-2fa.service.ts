@@ -22,10 +22,7 @@ export async function disableTwoFactor({
     });
 
     span.setAttribute("user.id", currentUser.id);
-    span.setAttribute(
-      "auth.method",
-      isBackupCode ? "backup_code" : "totp",
-    );
+    span.setAttribute("auth.method", isBackupCode ? "backup_code" : "totp");
 
     const user = await withSpan("Load 2FA Settings", async () => {
       return authRepository.getTwoFactorSettings(currentUser.id);

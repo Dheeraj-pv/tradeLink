@@ -49,7 +49,9 @@ export function useProfileSettings() {
         return false;
       }
       toast.success("Profile saved successfully");
-      setProfile((prev) => (prev ? { ...prev, name, phone, categoryIds } : prev));
+      setProfile((prev) =>
+        prev ? { ...prev, name, phone, categoryIds } : prev,
+      );
       return true;
     } catch {
       toast.error("Network error");
@@ -58,7 +60,7 @@ export function useProfileSettings() {
   };
 
   useEffect(() => {
-    void fetchSettings();
+    fetchSettings();
   }, [fetchSettings]);
 
   return {

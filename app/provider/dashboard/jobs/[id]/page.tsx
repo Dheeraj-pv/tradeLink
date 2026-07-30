@@ -1,8 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { useParams } from "next/navigation";
 import { BriefcaseIcon, DollarIcon, PinIcon } from "@/components/ui/icons";
 import { JobInfoGrid, JobStatusMeta } from "@/components/ui/job-components";
 import {
@@ -11,109 +9,26 @@ import {
   type ServerMediaItem,
 } from "@/components/ui/media-components";
 import { BackLink } from "@/components/ui/page-components";
-import { getUserFriendlyErrorMessage } from "@/lib/errors/error-message";
-
-type Job = {
-  id: string;
-  title: string;
-  description: string;
-  address: string;
-  status: string;
-  category: string;
-  bidCount: number;
-  createdAt: string;
-};
-
-const STATUS_BADGE: Record<string, string> = {
-  OPEN: "badge-open",
-  ASSIGNED: "badge-assigned",
-  COMPLETED: "badge-completed",
-  IN_PROGRESS: "badge-assigned",
-  CANCELLED: "badge-cancelled",
-};
+import { useJobDetail } from "./hooks/useJobDetail";
+import { JobDetailCard } from "./components/JobDetailCard";
+import { BidForm } from "./components/BidForm";
+import { STATUS_BADGE } from "./constants";
 
 export default function JobDetailPage() {
   const params = useParams<{ id: string }>();
-  const router = useRouter();
-  const jobId = params.id;
+  const jobId = params?.id;
 
-  const [job, setJob] = useState<Job | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [amount, setAmount] = useState("");
-  const [message, setMessage] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [media, setMedia] = useState<ServerMediaItem[]>([]);
-  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const {
+    job,
+    loading,
+    media,
+    previewIndex,
+    setPreviewIndex,
+    handleBid,
+    submitting,
+  } = useJobDetail(jobId);
 
-  const fetchJob = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`/api/provider/jobs/${jobId}`);
-      const response = await res.json();
-      if (!res.ok) {
-        toast.error(getUserFriendlyErrorMessage(response));
-        return;
-      }
-      setJob(response.data.job);
-    } catch {
-      toast.error("Network error — please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, [jobId]);
-
-  const fetchMedia = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/provider/jobs/${jobId}/media`);
-      if (!res.ok) return;
-      const data = await res.json();
-      setMedia(data.media);
-    } catch (error) {
-      console.error(error);
-    }
-  }, [jobId]);
-
-  async function handleBid() {
-    try {
-      setSubmitting(true);
-
-      const res = await fetch(`/api/provider/jobs/${jobId}/bid`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: Number(amount),
-          message,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        if (data.details) {
-          toast.error(Object.values(data.details).flat().join("\n"));
-        } else {
-          toast.error(getUserFriendlyErrorMessage(data));
-        }
-        return;
-      }
-
-      toast.success("Bid submitted");
-      setAmount("");
-      setMessage("");
-      router.push("/provider/bids");
-    } catch {
-      toast.error("Network error — please try again.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  useEffect(() => {
-    void fetchJob();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void fetchMedia();
-  }, [fetchJob, fetchMedia]);
-
+  // Loading state
   if (loading) {
     return (
       <div className="dash-page">
@@ -122,10 +37,43 @@ export default function JobDetailPage() {
     );
   }
 
-  if (!job) return null;
+  // No job found
+  if (!job) {
+    return (
+      <div className="dash-page">
+        <div className="detail-loading">Job not found</div>
+      </div>
+    );
+  }
 
   const badgeClass = STATUS_BADGE[job.status] ?? "badge-open";
   const isOpen = job.status === "OPEN";
+
+  // Prepare info grid items
+  const infoItems = [
+    {
+      label: "Address",
+      value: job.address,
+      icon: <PinIcon width={14} height={14} />,
+    },
+    {
+      label: "Category",
+      value: job.category,
+      icon: <BriefcaseIcon width={14} height={14} />,
+    },
+    {
+      label: "Bids Received",
+      value: `${job.bidCount} ${job.bidCount === 1 ? "bid" : "bids"}`,
+      icon: <DollarIcon width={14} height={14} />,
+    },
+  ];
+
+  // Transform media to match ServerMediaItem type (includes id)
+  const mediaItems: ServerMediaItem[] = media.map((item) => ({
+    id: item.id, // Now includes the required id field
+    url: item.url,
+    mediaType: item.mediaType === "VIDEO" ? "VIDEO" : "IMAGE",
+  }));
 
   return (
     <div className="dash-page">
@@ -143,87 +91,32 @@ export default function JobDetailPage() {
         createdAt={job.createdAt}
       />
 
-      <JobInfoGrid
-        items={[
-          {
-            label: "Address",
-            value: job.address,
-            icon: <PinIcon width={14} height={14} />,
-          },
-          {
-            label: "Category",
-            value: job.category,
-            icon: <BriefcaseIcon width={14} height={14} />,
-          },
-          {
-            label: "Bids Received",
-            value: `${job.bidCount} ${job.bidCount === 1 ? "bid" : "bids"}`,
-            icon: <DollarIcon width={14} height={14} />,
-          },
-        ]}
-      />
+      <JobInfoGrid items={infoItems} />
 
-      <div className="detail-card">
-        <h2 className="detail-card-title">Description</h2>
-        <p className="detail-card-text">{job.description}</p>
-      </div>
+      <JobDetailCard title="Description" description={job.description} />
 
-      {media.length > 0 ? (
+      {media.length > 0 && (
         <div className="detail-card">
           <h2 className="detail-card-title">Media</h2>
-          <MediaGallery items={media} onSelect={setPreviewIndex} />
+          <MediaGallery
+            items={mediaItems}
+            onSelect={(index) => setPreviewIndex(index)}
+          />
         </div>
-      ) : null}
+      )}
 
-      {previewIndex !== null ? (
+      {previewIndex !== null && media[previewIndex] && (
         <MediaPreviewModal
           src={media[previewIndex].url}
           type={media[previewIndex].mediaType === "VIDEO" ? "video" : "image"}
           onClose={() => setPreviewIndex(null)}
           zIndex={9999}
         />
-      ) : null}
+      )}
 
-      {isOpen ? (
-        <div className="detail-card">
-          <h2 className="detail-card-title">Place Your Bid</h2>
+      {isOpen && <BidForm onSubmit={handleBid} submitting={submitting} />}
 
-          <div className="auth-field">
-            <label>
-              Bid Amount ($)
-              <span>*</span>
-            </label>
-            <input
-              type="number"
-              placeholder="0.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-          </div>
-
-          <div className="auth-field">
-            <label>
-              Message to Customer
-              <span>*</span>
-            </label>
-            <textarea
-              placeholder="Introduce yourself, explain your approach, and mention your availability..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-            />
-          </div>
-
-          <button
-            className="btn-submit-bid"
-            disabled={submitting || !amount || !message.trim()}
-            onClick={handleBid}
-          >
-            {submitting ? "Submitting..." : "Submit Bid"}
-          </button>
-        </div>
-      ) : null}
-
-      <style jsx>{`
+      <style>{`
         .detail-loading {
           padding: 40px;
           text-align: center;
@@ -275,9 +168,15 @@ export default function JobDetailPage() {
           font-size: 0.9rem;
           font-family: inherit;
           background: white;
+          transition: border-color 0.15s;
+        }
+        .auth-field input:focus,
+        .auth-field textarea:focus {
+          border-color: var(--navy);
+          outline: none;
         }
         .auth-field textarea {
-          resize: none;
+          resize: vertical;
           min-height: 110px;
         }
         .btn-submit-bid {
@@ -292,7 +191,7 @@ export default function JobDetailPage() {
           cursor: pointer;
           transition: background 0.15s;
         }
-        .btn-submit-bid:hover {
+        .btn-submit-bid:hover:not(:disabled) {
           background: #253460;
         }
         .btn-submit-bid:disabled {

@@ -24,19 +24,15 @@ export async function verify2FALogin({
 
   if (!pending) {
     logger.warn("2FA verify failed: expired or invalid pending token");
-    throw new AuthenticationError(
-      ErrorCode.EXPIRED_TOKEN
-    );
+    throw new AuthenticationError(ErrorCode.EXPIRED_TOKEN);
   }
 
-  const user = await findUserFor2FALogin(
-    pending.userId
-  );
+  const user = await findUserFor2FALogin(pending.userId);
 
   if (!user?.twoFactorSecret) {
     logger.warn(
       { userId: pending.userId },
-      "2FA verify failed: no secret configured"
+      "2FA verify failed: no secret configured",
     );
 
     throw new ValidationError(ErrorCode.INVALID_INPUT);
@@ -50,10 +46,7 @@ export async function verify2FALogin({
       });
 
   if (!valid) {
-    logger.warn(
-      { userId: user.id },
-      "2FA verify failed: invalid code"
-    );
+    logger.warn({ userId: user.id }, "2FA verify failed: invalid code");
 
     throw new ValidationError(ErrorCode.INVALID_INPUT);
   }
@@ -72,7 +65,7 @@ export async function verify2FALogin({
       userId: user.id,
       role: user.userRole,
     },
-    "User logged in successfully (2FA)"
+    "User logged in successfully (2FA)",
   );
 
   return {

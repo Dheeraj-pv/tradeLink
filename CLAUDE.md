@@ -45,11 +45,11 @@ Always call `getPrisma()` inside each repository function.
 
 ```ts
 export async function findUser(id: string) {
-    const prisma = getPrisma();
+  const prisma = getPrisma();
 
-    return prisma.user.findUnique({
-        where: { id },
-    });
+  return prisma.user.findUnique({
+    where: { id },
+  });
 }
 ```
 

@@ -1,19 +1,12 @@
 import { getPrisma } from "@/lib/prisma";
 
-
-
 export async function findAssignedJobs(providerId: string) {
-    const prisma = getPrisma();
+  const prisma = getPrisma();
   return prisma.job.findMany({
     where: {
       assignedProviderId: providerId,
       status: {
-        in: [
-          "ASSIGNED",
-          "IN_PROGRESS",
-          "COMPLETED",
-          "AWAITING_APPROVAL",
-        ],
+        in: ["ASSIGNED", "IN_PROGRESS", "COMPLETED", "AWAITING_APPROVAL"],
       },
     },
     orderBy: {

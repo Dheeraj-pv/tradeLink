@@ -89,10 +89,7 @@ export async function getJobForEdit(id: string) {
   });
 }
 
-export async function updateJob(
-  id: string,
-  data: UpdateJobInput,
-) {
+export async function updateJob(id: string, data: UpdateJobInput) {
   return withSpan("Update Job", async (span) => {
     const user = await withSpan("Authenticate User", async () => {
       return (await getCurrentUser())!;

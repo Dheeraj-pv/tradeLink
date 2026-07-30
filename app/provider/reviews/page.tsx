@@ -1,173 +1,65 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
-import { CheckCircleIcon } from "@/components/ui/icons";
+import { useState } from "react";
 import {
-  MediaGallery,
   MediaPreviewModal,
   type ServerMediaItem,
 } from "@/components/ui/media-components";
-import { RatingStars } from "@/components/ui/review-components";
-import { getUserFriendlyErrorMessage } from "@/lib/errors/error-message";
-
-type Review = {
-  id: string;
-  rating: number;
-  comment: string | null;
-  customerName: string;
-  createdAt: string;
-  media: ServerMediaItem[];
-};
-
-type Summary = {
-  total: number;
-  avgRating: number;
-  breakdown: Record<string, number>;
-};
-
-const CUSTOMER_SAYS = [
-  "Professional & punctual",
-  "Great communication",
-  "Quality workmanship",
-  "Fair pricing",
-];
+import { useReviews } from "./hooks/useReviews";
+import { ReviewList } from "./components/ReviewList";
+import { SummaryCard } from "./components/SummaryCard";
+import { RatingBreakdown } from "./components/RatingBreakdown";
+import { CustomerSays } from "./components/CustomerSays";
 
 export default function ReviewsPage() {
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [summary, setSummary] = useState<Summary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [previewMedia, setPreviewMedia] = useState<ServerMediaItem | null>(null);
+  const { reviews, summary, loading, maxBreakdown } = useReviews();
+  const [previewMedia, setPreviewMedia] = useState<ServerMediaItem | null>(
+    null,
+  );
 
-  const fetchReviews = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch("/api/provider/reviews");
-      const response = await res.json();
-      if (!res.ok) {
-        toast.error(getUserFriendlyErrorMessage(response));
-        return;
-      }
-
-      setReviews(Array.isArray(response.data.reviews) ? response.data.reviews : []);
-      setSummary(response.data.summary ?? null);
-    } catch {
-      toast.error("Network error — please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void fetchReviews();
-  }, [fetchReviews]);
-
-  const maxBreakdown = summary
-    ? Math.max(...Object.values(summary.breakdown ?? {}), 1)
-    : 1;
+  if (loading) {
+    return (
+      <div className="dash-page">
+        <h1 className="dash-page-title">Reviews</h1>
+        <p className="rv-state">Loading reviews…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="dash-page">
       <h1 className="dash-page-title">Reviews</h1>
-      {summary ? (
+      {summary && (
         <p className="dash-page-sub">
           {summary.total} review{summary.total !== 1 ? "s" : ""} received
         </p>
-      ) : null}
+      )}
 
-      {loading ? <p className="rv-state">Loading reviews…</p> : null}
+      <div className="rv-layout">
+        <ReviewList reviews={reviews} onMediaSelect={setPreviewMedia} />
 
-      {!loading ? (
-        <div className="rv-layout">
-          <div className="rv-list">
-            {reviews.length === 0 ? <p className="rv-state">No reviews yet.</p> : null}
-            {reviews.map((review) => (
-              <div key={review.id} className="rv-card">
-                <div className="rv-card-header">
-                  <div className="rv-author-row">
-                    <div className="rv-avatar">{review.customerName.charAt(0)}</div>
-                    <div>
-                      <p className="rv-name">{review.customerName}</p>
-                      <p className="rv-date">{review.createdAt}</p>
-                    </div>
-                  </div>
-                  <div className="rv-rating-row">
-                    <RatingStars rating={review.rating} />
-                    <span className="rv-rating-num">{review.rating}.0</span>
-                  </div>
-                </div>
-                {review.comment ? <p className="rv-comment">{review.comment}</p> : null}
-                {review.media.length > 0 ? (
-                  <MediaGallery
-                    items={review.media}
-                    onSelect={(index) => setPreviewMedia(review.media[index])}
-                  />
-                ) : null}
-              </div>
-            ))}
-          </div>
+        {summary && (
+          <aside className="rv-sidebar">
+            <SummaryCard summary={summary} />
+            <RatingBreakdown
+              breakdown={summary.breakdown}
+              maxBreakdown={maxBreakdown}
+            />
+            <CustomerSays />
+          </aside>
+        )}
+      </div>
 
-          {summary ? (
-            <aside className="rv-sidebar">
-              <div className="rv-sidebar-card avg-card">
-                <p className="rv-avg-num">{summary.avgRating.toFixed(1)}</p>
-                <div className="avg-stars">
-                  <RatingStars rating={summary.avgRating} gap={4} />
-                </div>
-                <p className="rv-avg-total">{summary.total} reviews</p>
-              </div>
-
-              <div className="rv-sidebar-card">
-                <p className="rv-sidebar-label">RATING BREAKDOWN</p>
-                <div className="breakdown-rows">
-                  {[5, 4, 3, 2, 1].map((star) => {
-                    const count = summary.breakdown[star] ?? 0;
-                    const pct = Math.round((count / maxBreakdown) * 100);
-
-                    return (
-                      <div key={star} className="breakdown-row">
-                        <span className="breakdown-star">{star}</span>
-                        <RatingStars rating={1} />
-                        <div className="breakdown-bar-bg">
-                          <div
-                            className="breakdown-bar-fill"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <span className="breakdown-count">{count}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="rv-sidebar-card">
-                <p className="rv-sidebar-label">WHAT CUSTOMERS SAY</p>
-                <div className="says-list">
-                  {CUSTOMER_SAYS.map((item) => (
-                    <div key={item} className="says-row">
-                      <CheckCircleIcon width={16} height={16} />
-                      <span className="says-text">{item}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </aside>
-          ) : null}
-        </div>
-      ) : null}
-
-      {previewMedia ? (
+      {previewMedia && (
         <MediaPreviewModal
           src={previewMedia.url}
           type={previewMedia.mediaType === "VIDEO" ? "video" : "image"}
           onClose={() => setPreviewMedia(null)}
           zIndex={9999}
         />
-      ) : null}
+      )}
 
-      <style jsx>{`
+      <style>{`
         .rv-layout {
           display: grid;
           grid-template-columns: 1fr 280px;

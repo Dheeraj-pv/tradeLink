@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { useState } from "react";
 import { toast } from "sonner";
 import { getUserFriendlyErrorMessage } from "@/lib/errors/error-message";
@@ -78,11 +79,7 @@ export function CertificationsSection({ certifications, setCertifications, onRef
         {certifications.map((cert) => (
           <div key={cert.id} className="cert-row">
             <div className="cert-label">
-              <img
-                src={cert.url}
-                alt={cert.title}
-                className="cert-thumb"
-                onClick={() => setPreviewCert(cert.url)}
+              <Image src="" alt="" width={100} height={100} /> setPreviewCert(cert.url)}
               />
               <div className="cert-info">
                 <span className="cert-title">
@@ -138,7 +135,7 @@ export function CertificationsSection({ certifications, setCertifications, onRef
       {previewCert && (
         <div className="photo-modal" onClick={() => setPreviewCert(null)}>
           <div className="photo-content" onClick={(e) => e.stopPropagation()}>
-            <img src={previewCert} alt="Certificate" className="cert-full-image" />
+            <Image src="" alt="Certificate" width={100} height={100} />
             <button className="btn-close-preview" onClick={() => setPreviewCert(null)}>
               X
             </button>

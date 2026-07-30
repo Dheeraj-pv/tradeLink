@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from "next/server";
 import { getProviderJob } from "@/services/provider/provider-job.service";
 

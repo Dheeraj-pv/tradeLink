@@ -106,10 +106,7 @@ export async function findPasswordInfo(userId: string) {
   });
 }
 
-export async function updatePassword(
-  userId: string,
-  password: string,
-) {
+export async function updatePassword(userId: string, password: string) {
   const prisma = getPrisma();
 
   return prisma.user.update({
@@ -125,9 +122,7 @@ export async function updatePassword(
   });
 }
 
-export async function deleteProviderAccount(
-  userId: string,
-) {
+export async function deleteProviderAccount(userId: string) {
   const prisma = getPrisma();
 
   return prisma.user.delete({

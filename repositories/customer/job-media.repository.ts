@@ -1,12 +1,7 @@
 import { MediaType } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
 
- 
-
-export async function findOwnedJob(
-  jobId: string,
-  customerId: string,
-) {
+export async function findOwnedJob(jobId: string, customerId: string) {
   const prisma = getPrisma();
   return prisma.job.findFirst({
     where: {

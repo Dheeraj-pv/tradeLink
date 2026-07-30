@@ -1,7 +1,5 @@
 import { getPrisma } from "@/lib/prisma";
 
-
-
 export async function findProfile(userId: string) {
   const prisma = getPrisma();
   return prisma.user.findUnique({
@@ -50,10 +48,7 @@ export async function findPasswordDetails(userId: string) {
   });
 }
 
-export async function updatePassword(
-  userId: string,
-  password: string,
-) {
+export async function updatePassword(userId: string, password: string) {
   const prisma = getPrisma();
   return prisma.user.update({
     where: {

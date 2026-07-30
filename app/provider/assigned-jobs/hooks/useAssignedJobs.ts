@@ -35,7 +35,11 @@ export function useAssignedJobs() {
   }, []);
 
   useEffect(() => {
-    void fetchJobs();
+    const loadJobs = async () => {
+      await fetchJobs();
+    };
+
+    void loadJobs();
   }, [fetchJobs]);
 
   return { jobs, summary, loading, error, fetchJobs };

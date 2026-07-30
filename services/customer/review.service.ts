@@ -15,10 +15,7 @@ type SubmitReviewInput = {
   comment?: string | null;
 };
 
-export async function submitReview(
-  jobId: string,
-  input: SubmitReviewInput,
-) {
+export async function submitReview(jobId: string, input: SubmitReviewInput) {
   return withSpan("Submit Review", async (span) => {
     const user = await withSpan("Authenticate User", async () => {
       return (await getCurrentUser())!;
@@ -85,12 +82,9 @@ export async function submitReview(
 
     span.setAttribute("provider.id", job.assignedProviderId!);
 
-    const existing = await withSpan(
-      "Check Existing Review",
-      async () => {
-        return reviewRepository.findReviewByJob(jobId);
-      },
-    );
+    const existing = await withSpan("Check Existing Review", async () => {
+      return reviewRepository.findReviewByJob(jobId);
+    });
 
     if (existing) {
       span.setAttribute("failure.reason", "review_exists");

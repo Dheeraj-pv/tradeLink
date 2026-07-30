@@ -2,10 +2,7 @@
 
 import { randomUUID } from "crypto";
 import { Readable } from "stream";
-import {
-  DeleteObjectCommand,
-  PutObjectCommand,
-} from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { AuthorizationError } from "@/lib/errors/AuthorizationError";
 import { NotFoundError } from "@/lib/errors/NotFoundError";
@@ -32,10 +29,7 @@ const ALLOWED = [
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
-export async function uploadJobMedia(
-  jobId: string,
-  files: File[],
-) {
+export async function uploadJobMedia(jobId: string, files: File[]) {
   return withSpan("Upload Job Media", async (span) => {
     const user = await withSpan("Authenticate User", async () => {
       return (await getCurrentUser())!;
@@ -108,19 +102,14 @@ export async function uploadJobMedia(
         return mediaRepository.createMedia({
           jobId,
           filePath: objectName,
-          mediaType: file.type.startsWith("video/")
-            ? "VIDEO"
-            : "IMAGE",
+          mediaType: file.type.startsWith("video/") ? "VIDEO" : "IMAGE",
         });
       });
 
       uploaded.push({
         id: media.id,
         url: getMediaUrl(objectName),
-        type:
-          file.type.startsWith("video/")
-            ? "video"
-            : "image",
+        type: file.type.startsWith("video/") ? "video" : "image",
       });
     }
 
@@ -139,10 +128,7 @@ export async function uploadJobMedia(
   });
 }
 
-export async function deleteJobMedia(
-  jobId: string,
-  mediaId: string,
-) {
+export async function deleteJobMedia(jobId: string, mediaId: string) {
   return withSpan("Delete Job Media", async (span) => {
     const user = await withSpan("Authenticate User", async () => {
       return (await getCurrentUser())!;

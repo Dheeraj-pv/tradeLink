@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { CheckCircleIcon, UserIcon, PinIcon, DollarIcon, ChevronRightIcon } from "./icons";
+import {
+  CheckCircleIcon,
+  UserIcon,
+  PinIcon,
+  DollarIcon,
+  ChevronRightIcon,
+} from "./icons";
 import { getBadgeClass } from "../utils/statusHelpers";
 import type { Job } from "../types";
 

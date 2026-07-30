@@ -1,15 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, ChangeEvent } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { getUserFriendlyErrorMessage } from "@/lib/errors/error-message";
 
+// Type definitions
+type ForgotPasswordResponse = {
+  message?: string;
+  error?: string;
+};
+
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState<string>("");
   const [message, setMessage] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value);
+  };
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -28,17 +38,22 @@ export default function ForgotPasswordPage() {
         body: JSON.stringify({ email }),
       });
 
-      const data = await res.json();
+      let data: ForgotPasswordResponse | null = null;
+      try {
+        data = await res.json();
+      } catch {
+        // Handle non-JSON response
+      }
 
       if (!res.ok) {
-        toast.error(getUserFriendlyErrorMessage(data));
+        toast.error(getUserFriendlyErrorMessage(data ?? undefined));
         return;
       }
 
-      setMessage(data.message);
+      setMessage(data?.message ?? "Password reset link sent to your email.");
       setEmail("");
-    } catch (err) {
-      console.error(err);
+      toast.success("Reset link sent!");
+    } catch {
       toast.error("Network error. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -50,7 +65,7 @@ export default function ForgotPasswordPage() {
       <h2>Forgot Password</h2>
 
       <p className="auth-subtitle">
-        Enter your email address and we'll send you a password reset link.
+        Enter your email address and we&apos;ll send you a password reset link.
       </p>
 
       <div className="auth-tabs">
@@ -90,7 +105,7 @@ export default function ForgotPasswordPage() {
             placeholder="you@email.com"
             autoComplete="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={handleEmailChange}
             required
           />
         </div>

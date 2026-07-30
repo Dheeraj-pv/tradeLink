@@ -24,24 +24,16 @@ export async function getProviderBids() {
       return providerBidsRepository.findProviderBids(user.id);
     });
 
-    const pending = bids.filter(
-      (bid) => bid.status === "PENDING",
-    );
+    const pending = bids.filter((bid) => bid.status === "PENDING");
 
-    const accepted = bids.filter(
-      (bid) => bid.status === "ACCEPTED",
-    );
+    const accepted = bids.filter((bid) => bid.status === "ACCEPTED");
 
-    const rejected = bids.filter(
-      (bid) => bid.status === "REJECTED",
-    );
+    const rejected = bids.filter((bid) => bid.status === "REJECTED");
 
     const totalBids = bids.length;
 
     const winRate =
-      totalBids > 0
-        ? Math.round((accepted.length / totalBids) * 100)
-        : 0;
+      totalBids > 0 ? Math.round((accepted.length / totalBids) * 100) : 0;
 
     const confirmedEarnings = accepted.reduce(
       (sum, bid) => sum + Number(bid.amount),
@@ -58,14 +50,8 @@ export async function getProviderBids() {
     span.setAttribute("bids.accepted", accepted.length);
     span.setAttribute("bids.rejected", rejected.length);
     span.setAttribute("bids.win_rate", winRate);
-    span.setAttribute(
-      "bids.confirmed_earnings",
-      confirmedEarnings,
-    );
-    span.setAttribute(
-      "bids.pending_earnings",
-      pendingEarnings,
-    );
+    span.setAttribute("bids.confirmed_earnings", confirmedEarnings);
+    span.setAttribute("bids.pending_earnings", pendingEarnings);
 
     logger.info(
       {
@@ -84,9 +70,7 @@ export async function getProviderBids() {
         id: bid.id,
         amount: Number(bid.amount),
         status: bid.status,
-        createdAt: bid.createdAt
-          .toISOString()
-          .split("T")[0],
+        createdAt: bid.createdAt.toISOString().split("T")[0],
         job: {
           id: bid.job.id,
           title: bid.job.title,

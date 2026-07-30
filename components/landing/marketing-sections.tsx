@@ -81,8 +81,9 @@ export function HeroSection() {
         one platform.
       </h1>
       <p>
-        Post your job and receive competitive bids from verified local providers.
-        Compare ratings, review credentials, and hire with confidence.
+        Post your job and receive competitive bids from verified local
+        providers. Compare ratings, review credentials, and hire with
+        confidence.
       </p>
       <div className="hero-btns">
         <Link href="/auth/register" className="btn-hero-primary">
@@ -113,7 +114,9 @@ export function HowItWorksSection() {
   return (
     <section className="how">
       <p className="section-eyebrow">How it works</p>
-      <h2 className="section-title">Hire with confidence from first quote to final handshake.</h2>
+      <h2 className="section-title">
+        Hire with confidence from first quote to final handshake.
+      </h2>
       <div className="steps-grid">
         {steps.map((step) => {
           const Icon = step.icon;
@@ -155,7 +158,9 @@ export function CTASection() {
       <div className="cta-inner">
         <div className="cta-text">
           <h2>Ready to get started?</h2>
-          <p>Join homeowners and providers who trust TradeLink for every project.</p>
+          <p>
+            Join homeowners and providers who trust TradeLink for every project.
+          </p>
         </div>
         <div className="cta-btns">
           <Link href="/auth/register" className="btn-cta-primary">
@@ -177,7 +182,9 @@ export function LandingFooter() {
         <KeyIcon style={{ width: 18, height: 18 }} />
         TradeLink
       </Link>
-      <p className="footer-copy">© 2024 TradeLink. Built for trusted local work.</p>
+      <p className="footer-copy">
+        © 2024 TradeLink. Built for trusted local work.
+      </p>
     </footer>
   );
 }

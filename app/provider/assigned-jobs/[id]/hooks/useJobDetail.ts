@@ -27,34 +27,41 @@ export function useJobDetail(jobId: string) {
     }
   }, [jobId]);
 
-  const updateJobStatus = useCallback(async (action: "start" | "complete") => {
-    setActioning(true);
-    try {
-      const res = await fetch(`/api/provider/assigned-jobs/${jobId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId, action }),
-      });
-      const data = await res.json();
+  const updateJobStatus = useCallback(
+    async (action: "start" | "complete") => {
+      setActioning(true);
+      try {
+        const res = await fetch(`/api/provider/assigned-jobs/${jobId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jobId, action }),
+        });
+        const data = await res.json();
 
-      if (!res.ok) {
-        toast.error(getUserFriendlyErrorMessage(data));
-        return;
+        if (!res.ok) {
+          toast.error(getUserFriendlyErrorMessage(data));
+          return;
+        }
+
+        setJob((prev) =>
+          prev ? { ...prev, status: data.data.job.status as JobStatus } : prev,
+        );
+        toast.success("Job updated successfully");
+      } catch {
+        toast.error("Network error — please try again.");
+      } finally {
+        setActioning(false);
       }
-
-      setJob((prev) =>
-        prev ? { ...prev, status: data.data.job.status as JobStatus } : prev
-      );
-      toast.success("Job updated successfully");
-    } catch {
-      toast.error("Network error — please try again.");
-    } finally {
-      setActioning(false);
-    }
-  }, [jobId]);
+    },
+    [jobId],
+  );
 
   useEffect(() => {
-    void fetchJob();
+    const loadJob = async () => {
+      await fetchJob();
+    };
+
+    void loadJob();
   }, [fetchJob]);
 
   return { job, loading, actioning, fetchJob, updateJobStatus };

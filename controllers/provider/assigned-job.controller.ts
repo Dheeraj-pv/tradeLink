@@ -34,9 +34,7 @@ export async function getAssignedJobController(
   );
 }
 
-export async function updateAssignedJobController(
-  req: NextRequest,
-) {
+export async function updateAssignedJobController(req: NextRequest) {
   let body: unknown;
 
   try {

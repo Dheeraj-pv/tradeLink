@@ -18,8 +18,6 @@ import * as reviewMediaRepository from "@/repositories/customer/review-media.rep
 import { MediaType } from "@prisma/client";
 import { ErrorCode } from "@/lib/errors/ErrorCode";
 
-
-
 const ALLOWED: Record<string, "IMAGE" | "VIDEO"> = {
   "image/jpeg": "IMAGE",
   "image/png": "IMAGE",
@@ -31,10 +29,7 @@ const ALLOWED: Record<string, "IMAGE" | "VIDEO"> = {
 
 const MAX_SIZE = 10 * 1024 * 1024;
 
-export async function uploadReviewMedia(
-  jobId: string,
-  files: File[],
-) {
+export async function uploadReviewMedia(jobId: string, files: File[]) {
   return withSpan("Upload Review Media", async (span) => {
     const user = await withSpan("Authenticate User", async () => {
       return (await getCurrentUser())!;
@@ -119,10 +114,10 @@ export async function uploadReviewMedia(
     await ensureBucket();
 
     const uploaded: {
-  id: string;
-  mediaType: MediaType;
-  url: string;
-}[] = [];
+      id: string;
+      mediaType: MediaType;
+      url: string;
+    }[] = [];
 
     await withSpan("Upload Media", async () => {
       for (const file of files) {
@@ -189,10 +184,7 @@ export async function getReviewMedia(jobId: string) {
     );
 
     const review = await withSpan("Load Review", async () => {
-      return reviewMediaRepository.findOwnedReview(
-        jobId,
-        user.id,
-      );
+      return reviewMediaRepository.findOwnedReview(jobId, user.id);
     });
 
     if (!review) {

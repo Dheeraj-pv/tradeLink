@@ -8,10 +8,7 @@ type RouteParams = {
   }>;
 };
 
-export async function GET(
-  req: NextRequest,
-  context: RouteParams,
-) {
+export async function GET(req: NextRequest, context: RouteParams) {
   try {
     return await getProviderJobMediaController(req, context);
   } catch (error) {

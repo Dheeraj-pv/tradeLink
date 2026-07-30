@@ -51,9 +51,7 @@ export async function getAssignedJobs() {
         status: job.status,
         category: job.category.name,
         customerName: job.customer.name,
-        agreedAmount: job.bids[0]
-          ? Number(job.bids[0].amount)
-          : null,
+        agreedAmount: job.bids[0] ? Number(job.bids[0].amount) : null,
       })),
       summary: {
         activeCount: jobs.length,

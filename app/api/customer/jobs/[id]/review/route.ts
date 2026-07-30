@@ -8,10 +8,7 @@ type RouteParams = {
   }>;
 };
 
-export async function POST(
-  req: NextRequest,
-  { params }: RouteParams,
-) {
+export async function POST(req: NextRequest, { params }: RouteParams) {
   try {
     return await submitReviewController(req, { params });
   } catch (error) {

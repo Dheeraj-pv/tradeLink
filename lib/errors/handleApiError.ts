@@ -3,8 +3,6 @@ import { AppError } from "./AppError";
 import { logger } from "@/lib/logger";
 import { ErrorCode } from "./ErrorCode";
 
-
-
 export function handleApiError(error: unknown) {
   if (error instanceof AppError) {
     return NextResponse.json(
