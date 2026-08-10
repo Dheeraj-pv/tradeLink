@@ -14,6 +14,7 @@ env:
   ECR_REPOSITORY: tradelink
   ECS_CLUSTER: TradeLink-Cluster
   ECS_SERVICE: tradelink-service-crl6dbas
+  ECS_TASK_DEFINITION: tradelink
   CONTAINER_NAME: tradelink
 
 jobs:
@@ -31,14 +32,6 @@ jobs:
       # ----------------------------------------
       # 2. Authenticate to AWS using OIDC
       # ----------------------------------------
-
-      - name: Show GitHub OIDC claims
-        run: |
-          echo "Repository: $GITHUB_REPOSITORY"
-          echo "Repository ID: ${{ github.repository_id }}"
-          echo "Owner: ${{ github.repository_owner }}"
-          echo "Owner ID: ${{ github.repository_owner_id }}"
-          echo "Ref: $GITHUB_REF"
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
@@ -53,9 +46,9 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       # ----------------------------------------
-      # 4. Build Docker image
+      # 4. Build application image
       # ----------------------------------------
-      - name: Build Docker image
+      - name: Build application image
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -64,34 +57,150 @@ jobs:
           IMAGE="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
           docker build \
+            --target runner \
             -t "$IMAGE" \
             .
 
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
 
       # ----------------------------------------
-      # 5. Push image to ECR
+      # 5. Push application image
       # ----------------------------------------
-      - name: Push Docker image
+      - name: Push application image
         env:
           IMAGE: ${{ steps.build-image.outputs.image }}
         run: |
           docker push "$IMAGE"
 
       # ----------------------------------------
-      # 6. Fetch current ECS task definition
+      # 6. Build migrator image
+      # ----------------------------------------
+      - name: Build migrator image
+        id: build-migrator
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          IMAGE="$ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG}-migrator"
+
+          docker build \
+            --target migrator \
+            -t "$IMAGE" \
+            .
+
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      # ----------------------------------------
+      # 7. Push migrator image
+      # ----------------------------------------
+      - name: Push migrator image
+        env:
+          IMAGE: ${{ steps.build-migrator.outputs.image }}
+        run: |
+          docker push "$IMAGE"
+
+      # ----------------------------------------
+      # 8. Fetch current ECS task definition
       # ----------------------------------------
       - name: Fetch current task definition
         run: |
           aws ecs describe-task-definition \
             --region "$AWS_REGION" \
-            --task-definition "tradelink" \
+            --task-definition "$ECS_TASK_DEFINITION" \
             --query "taskDefinition" \
             --output json \
             > /tmp/task-definition-full.json
 
       # ----------------------------------------
-      # 7. Remove ECS-generated metadata
+      # 9. Fetch ECS service network configuration
+      # ----------------------------------------
+      - name: Fetch ECS network configuration
+        run: |
+          aws ecs describe-services \
+            --region "$AWS_REGION" \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --query "services[0].networkConfiguration.awsvpcConfiguration" \
+            --output json \
+            > /tmp/network-configuration.json
+
+      # ----------------------------------------
+      # 10. Run Prisma migrations
+      # ----------------------------------------
+      - name: Run Prisma migrations
+        id: migration
+        env:
+          MIGRATOR_IMAGE: ${{ steps.build-migrator.outputs.image }}
+        run: |
+          echo "Starting migration task..."
+          echo "Image: $MIGRATOR_IMAGE"
+
+          TASK_ARN=$(aws ecs run-task \
+            --region "$AWS_REGION" \
+            --cluster "$ECS_CLUSTER" \
+            --task-definition "$ECS_TASK_DEFINITION" \
+            --launch-type FARGATE \
+            --network-configuration file:///tmp/network-configuration.json \
+            --overrides "{
+              \"containerOverrides\": [
+                {
+                  \"name\": \"$CONTAINER_NAME\",
+                  \"image\": \"$MIGRATOR_IMAGE\",
+                  \"command\": [
+                    \"npx\",
+                    \"prisma\",
+                    \"migrate\",
+                    \"deploy\"
+                  ]
+                }
+              ]
+            }" \
+            --query "tasks[0].taskArn" \
+            --output text)
+
+          if [ -z "$TASK_ARN" ] || [ "$TASK_ARN" = "None" ]; then
+            echo "Failed to start migration task."
+            exit 1
+          fi
+
+          echo "Migration task started:"
+          echo "$TASK_ARN"
+
+          echo "Waiting for migration task to stop..."
+
+          aws ecs wait tasks-stopped \
+            --region "$AWS_REGION" \
+            --cluster "$ECS_CLUSTER" \
+            --tasks "$TASK_ARN"
+
+          echo "Migration task stopped."
+
+          EXIT_CODE=$(aws ecs describe-tasks \
+            --region "$AWS_REGION" \
+            --cluster "$ECS_CLUSTER" \
+            --tasks "$TASK_ARN" \
+            --query "tasks[0].containers[?name=='$CONTAINER_NAME'].exitCode | [0]" \
+            --output text)
+
+          STOP_REASON=$(aws ecs describe-tasks \
+            --region "$AWS_REGION" \
+            --cluster "$ECS_CLUSTER" \
+            --tasks "$TASK_ARN" \
+            --query "tasks[0].stoppedReason" \
+            --output text)
+
+          echo "Migration exit code: $EXIT_CODE"
+          echo "Migration stop reason: $STOP_REASON"
+
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "Prisma migration failed."
+            exit 1
+          fi
+
+          echo "Prisma migrations completed successfully."
+
+      # ----------------------------------------
+      # 11. Remove ECS-generated metadata
       # ----------------------------------------
       - name: Clean task definition
         run: |
@@ -110,7 +219,7 @@ jobs:
           > /tmp/task-definition.json
 
       # ----------------------------------------
-      # 8. Replace only the container image
+      # 12. Replace application container image
       # ----------------------------------------
       - name: Update container image
         id: task-definition
@@ -121,7 +230,7 @@ jobs:
           image: ${{ steps.build-image.outputs.image }}
 
       # ----------------------------------------
-      # 9. Deploy new task definition
+      # 13. Deploy new ECS task definition
       # ----------------------------------------
       - name: Deploy to ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
