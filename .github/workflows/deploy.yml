@@ -17,18 +17,6 @@ env:
   CONTAINER_NAME: tradelink
 
 jobs:
-  debug-oidc:
-    name: Debug GitHub OIDC
-    runs-on: ubuntu-latest
-
-    permissions:
-      id-token: write
-      contents: read
-
-    steps:
-      - name: Inspect OIDC token
-        uses: github/actions-oidc-debugger@main
-        
   deploy:
     name: Build and Deploy
     runs-on: ubuntu-latest
