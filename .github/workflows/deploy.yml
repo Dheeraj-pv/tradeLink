@@ -195,7 +195,7 @@ jobs:
 
           echo "task-definition=$MIGRATOR_TASK_DEFINITION" >> "$GITHUB_OUTPUT"
 
-      # ----------------------------------------
+            # ----------------------------------------
       # 13. Run Prisma migrations
       # ----------------------------------------
       - name: Run Prisma migrations
@@ -205,14 +205,20 @@ jobs:
           echo "Starting migration task..."
           echo "Task definition: $MIGRATOR_TASK_DEFINITION"
 
-          NETWORK_CONFIG=$(cat /tmp/awsvpc-configuration.json)
+          SUBNETS=$(jq -r '.subnets | join(",")' /tmp/awsvpc-configuration.json)
+          SECURITY_GROUPS=$(jq -r '.securityGroups | join(",")' /tmp/awsvpc-configuration.json)
+          ASSIGN_PUBLIC_IP=$(jq -r '.assignPublicIp' /tmp/awsvpc-configuration.json)
+
+          NETWORK_CONFIG="awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SECURITY_GROUPS],assignPublicIp=$ASSIGN_PUBLIC_IP}"
+
+          echo "Starting ECS task..."
 
           TASK_ARN=$(aws ecs run-task \
             --region "$AWS_REGION" \
             --cluster "$ECS_CLUSTER" \
             --launch-type FARGATE \
             --task-definition "$MIGRATOR_TASK_DEFINITION" \
-            --network-configuration "awsvpcConfiguration=$NETWORK_CONFIG" \
+            --network-configuration "$NETWORK_CONFIG" \
             --query "tasks[0].taskArn" \
             --output text)
 
@@ -256,7 +262,6 @@ jobs:
           fi
 
           echo "Prisma migrations completed successfully."
-
       # ----------------------------------------
       # 14. Update application container image
       # ----------------------------------------
