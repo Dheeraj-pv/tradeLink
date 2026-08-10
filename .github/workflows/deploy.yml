@@ -18,19 +18,54 @@ env:
   CONTAINER_NAME: tradelink
 
 jobs:
-  deploy:
-    name: Build and Deploy
+
+  # ========================================
+  # 1. Check what changed
+  # ========================================
+  changes:
+    name: Check Changes
+    runs-on: ubuntu-latest
+
+    outputs:
+      prisma: ${{ steps.filter.outputs.prisma }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Check Prisma changes
+        id: filter
+        run: |
+          if git diff --name-only HEAD^ HEAD | grep -E '^prisma/(schema\.prisma|migrations/)' > /dev/null; then
+            echo "Prisma changes detected."
+            echo "prisma=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No Prisma changes detected."
+            echo "prisma=false" >> "$GITHUB_OUTPUT"
+          fi
+
+
+  # ========================================
+  # 2. Run Prisma migrations
+  # ========================================
+  migrate:
+    name: Run Prisma Migrations
+    needs: changes
+    if: needs.changes.outputs.prisma == 'true'
     runs-on: ubuntu-latest
 
     steps:
+
       # ----------------------------------------
-      # 1. Checkout
+      # Checkout
       # ----------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v6
 
       # ----------------------------------------
-      # 2. Authenticate to AWS using OIDC
+      # AWS authentication
       # ----------------------------------------
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
@@ -39,41 +74,14 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       # ----------------------------------------
-      # 3. Login to ECR
+      # Login to ECR
       # ----------------------------------------
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       # ----------------------------------------
-      # 4. Build application image
-      # ----------------------------------------
-      - name: Build application image
-        id: build-image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          IMAGE="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-
-          docker build \
-            --target runner \
-            -t "$IMAGE" \
-            .
-
-          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
-
-      # ----------------------------------------
-      # 5. Push application image
-      # ----------------------------------------
-      - name: Push application image
-        env:
-          IMAGE: ${{ steps.build-image.outputs.image }}
-        run: |
-          docker push "$IMAGE"
-
-      # ----------------------------------------
-      # 6. Build migrator image
+      # Build migrator image
       # ----------------------------------------
       - name: Build migrator image
         id: build-migrator
@@ -91,7 +99,7 @@ jobs:
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
 
       # ----------------------------------------
-      # 7. Push migrator image
+      # Push migrator image
       # ----------------------------------------
       - name: Push migrator image
         env:
@@ -100,7 +108,7 @@ jobs:
           docker push "$IMAGE"
 
       # ----------------------------------------
-      # 8. Fetch current ECS task definition
+      # Fetch ECS task definition
       # ----------------------------------------
       - name: Fetch current task definition
         run: |
@@ -112,7 +120,7 @@ jobs:
             > /tmp/task-definition-full.json
 
       # ----------------------------------------
-      # 9. Clean task definition
+      # Clean task definition
       # ----------------------------------------
       - name: Clean task definition
         run: |
@@ -130,11 +138,8 @@ jobs:
           /tmp/task-definition-full.json \
           > /tmp/task-definition.json
 
-          echo "Cleaned task definition:"
-          cat /tmp/task-definition.json
-
       # ----------------------------------------
-      # 10. Fetch ECS service network configuration
+      # Fetch network configuration
       # ----------------------------------------
       - name: Fetch ECS network configuration
         run: |
@@ -146,11 +151,8 @@ jobs:
             --output json \
             > /tmp/awsvpc-configuration.json
 
-          echo "Network configuration:"
-          cat /tmp/awsvpc-configuration.json
-
       # ----------------------------------------
-      # 11. Create migrator task definition
+      # Create migrator task definition
       # ----------------------------------------
       - name: Create migrator task definition
         env:
@@ -171,10 +173,8 @@ jobs:
             /tmp/task-definition.json \
             > /tmp/migrator-task-definition.json
 
-          echo "Migrator task definition created."
-
       # ----------------------------------------
-      # 12. Register migrator task definition
+      # Register migrator task definition
       # ----------------------------------------
       - name: Register migrator task definition
         id: register-migrator
@@ -185,33 +185,20 @@ jobs:
             --query "taskDefinition.taskDefinitionArn" \
             --output text)
 
-          if [ -z "$MIGRATOR_TASK_DEFINITION" ] || [ "$MIGRATOR_TASK_DEFINITION" = "None" ]; then
-            echo "Failed to register migrator task definition."
-            exit 1
-          fi
-
-          echo "Migrator task definition:"
-          echo "$MIGRATOR_TASK_DEFINITION"
-
           echo "task-definition=$MIGRATOR_TASK_DEFINITION" >> "$GITHUB_OUTPUT"
 
-            # ----------------------------------------
-      # 13. Run Prisma migrations
+      # ----------------------------------------
+      # Run migration
       # ----------------------------------------
       - name: Run Prisma migrations
         env:
           MIGRATOR_TASK_DEFINITION: ${{ steps.register-migrator.outputs.task-definition }}
         run: |
-          echo "Starting migration task..."
-          echo "Task definition: $MIGRATOR_TASK_DEFINITION"
-
           SUBNETS=$(jq -r '.subnets | join(",")' /tmp/awsvpc-configuration.json)
           SECURITY_GROUPS=$(jq -r '.securityGroups | join(",")' /tmp/awsvpc-configuration.json)
           ASSIGN_PUBLIC_IP=$(jq -r '.assignPublicIp' /tmp/awsvpc-configuration.json)
 
           NETWORK_CONFIG="awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SECURITY_GROUPS],assignPublicIp=$ASSIGN_PUBLIC_IP}"
-
-          echo "Starting ECS task..."
 
           TASK_ARN=$(aws ecs run-task \
             --region "$AWS_REGION" \
@@ -227,17 +214,12 @@ jobs:
             exit 1
           fi
 
-          echo "Migration task started:"
-          echo "$TASK_ARN"
-
-          echo "Waiting for migration task to stop..."
+          echo "Migration task: $TASK_ARN"
 
           aws ecs wait tasks-stopped \
             --region "$AWS_REGION" \
             --cluster "$ECS_CLUSTER" \
             --tasks "$TASK_ARN"
-
-          echo "Migration task stopped."
 
           EXIT_CODE=$(aws ecs describe-tasks \
             --region "$AWS_REGION" \
@@ -246,15 +228,7 @@ jobs:
             --query "tasks[0].containers[0].exitCode" \
             --output text)
 
-          STOP_REASON=$(aws ecs describe-tasks \
-            --region "$AWS_REGION" \
-            --cluster "$ECS_CLUSTER" \
-            --tasks "$TASK_ARN" \
-            --query "tasks[0].stoppedReason" \
-            --output text)
-
           echo "Migration exit code: $EXIT_CODE"
-          echo "Migration stop reason: $STOP_REASON"
 
           if [ "$EXIT_CODE" != "0" ]; then
             echo "Prisma migration failed."
@@ -262,8 +236,104 @@ jobs:
           fi
 
           echo "Prisma migrations completed successfully."
+
+
+  # ========================================
+  # 3. Build and deploy application
+  # ========================================
+  deploy:
+    name: Build and Deploy
+    needs: [changes, migrate]
+    if: |
+      always() &&
+      needs.migrate.result != 'failure' &&
+      needs.migrate.result != 'cancelled'
+    runs-on: ubuntu-latest
+
+    steps:
+
       # ----------------------------------------
-      # 14. Update application container image
+      # Checkout
+      # ----------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      # ----------------------------------------
+      # AWS authentication
+      # ----------------------------------------
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # ----------------------------------------
+      # Login to ECR
+      # ----------------------------------------
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # ----------------------------------------
+      # Build application image
+      # ----------------------------------------
+      - name: Build application image
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          IMAGE="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+          docker build \
+            --target runner \
+            -t "$IMAGE" \
+            .
+
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      # ----------------------------------------
+      # Push application image
+      # ----------------------------------------
+      - name: Push application image
+        env:
+          IMAGE: ${{ steps.build-image.outputs.image }}
+        run: |
+          docker push "$IMAGE"
+
+      # ----------------------------------------
+      # Fetch ECS task definition
+      # ----------------------------------------
+      - name: Fetch current task definition
+        run: |
+          aws ecs describe-task-definition \
+            --region "$AWS_REGION" \
+            --task-definition "$ECS_TASK_DEFINITION" \
+            --query "taskDefinition" \
+            --output json \
+            > /tmp/task-definition-full.json
+
+      # ----------------------------------------
+      # Clean task definition
+      # ----------------------------------------
+      - name: Clean task definition
+        run: |
+          jq 'del(
+            .taskDefinitionArn,
+            .revision,
+            .status,
+            .requiresAttributes,
+            .compatibilities,
+            .registeredAt,
+            .registeredBy,
+            .deregisteredAt,
+            .tags
+          )' \
+          /tmp/task-definition-full.json \
+          > /tmp/task-definition.json
+
+      # ----------------------------------------
+      # Update application image
       # ----------------------------------------
       - name: Update container image
         id: task-definition
@@ -274,7 +344,7 @@ jobs:
           image: ${{ steps.build-image.outputs.image }}
 
       # ----------------------------------------
-      # 15. Deploy new ECS task definition
+      # Deploy ECS service
       # ----------------------------------------
       - name: Deploy to ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
