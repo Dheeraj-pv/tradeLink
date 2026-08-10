@@ -85,7 +85,7 @@ jobs:
         run: |
           aws ecs describe-task-definition \
             --region "$AWS_REGION" \
-            --task-definition "$ECS_SERVICE" \
+            --task-definition "tradelink" \
             --query "taskDefinition" \
             --output json \
             > /tmp/task-definition-full.json
