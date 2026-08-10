@@ -32,7 +32,7 @@ export async function enableTwoFactor(userId: string, backupCodes: string[]) {
   const prisma = getPrisma();
 
   await prisma.$transaction([
-    prisma.user.update({
+    prisma.user.update({  
       where: {
         id: userId,
       },

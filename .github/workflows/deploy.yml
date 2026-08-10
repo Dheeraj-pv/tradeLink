@@ -1,0 +1,124 @@
+name: Deploy TradeLink
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: eu-north-1
+  ECR_REPOSITORY: tradelink
+  ECS_CLUSTER: TradeLink-Cluster
+  ECS_SERVICE: tradelink-service-crl6dbas
+  CONTAINER_NAME: tradelink
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      # ----------------------------------------
+      # 1. Checkout
+      # ----------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      # ----------------------------------------
+      # 2. Authenticate to AWS using OIDC
+      # ----------------------------------------
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # ----------------------------------------
+      # 3. Login to ECR
+      # ----------------------------------------
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # ----------------------------------------
+      # 4. Build Docker image
+      # ----------------------------------------
+      - name: Build Docker image
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          IMAGE="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+          docker build \
+            -t "$IMAGE" \
+            .
+
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      # ----------------------------------------
+      # 5. Push image to ECR
+      # ----------------------------------------
+      - name: Push Docker image
+        env:
+          IMAGE: ${{ steps.build-image.outputs.image }}
+        run: |
+          docker push "$IMAGE"
+
+      # ----------------------------------------
+      # 6. Fetch current ECS task definition
+      # ----------------------------------------
+      - name: Fetch current task definition
+        run: |
+          aws ecs describe-task-definition \
+            --region "$AWS_REGION" \
+            --task-definition "$ECS_SERVICE" \
+            --query "taskDefinition" \
+            --output json \
+            > /tmp/task-definition-full.json
+
+      # ----------------------------------------
+      # 7. Remove ECS-generated metadata
+      # ----------------------------------------
+      - name: Clean task definition
+        run: |
+          jq 'del(
+            .taskDefinitionArn,
+            .revision,
+            .status,
+            .requiresAttributes,
+            .compatibilities,
+            .registeredAt,
+            .registeredBy,
+            .deregisteredAt,
+            .tags
+          )' \
+          /tmp/task-definition-full.json \
+          > /tmp/task-definition.json
+
+      # ----------------------------------------
+      # 8. Replace only the container image
+      # ----------------------------------------
+      - name: Update container image
+        id: task-definition
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: /tmp/task-definition.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
+
+      # ----------------------------------------
+      # 9. Deploy new task definition
+      # ----------------------------------------
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-definition.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true

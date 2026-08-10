@@ -1,3 +1,4 @@
+// services/auth/login.service.ts
 import { verifyPassword } from "@/lib/auth/password";
 import { signPendingToken, signToken } from "@/lib/auth/jwt";
 import { setAuthCookie } from "@/lib/auth/cookies";
@@ -9,9 +10,10 @@ import * as authRepository from "@/repositories/auth/auth.repository";
 import { z } from "zod";
 import { ErrorCode } from "@/lib/errors/ErrorCode";
 
+// Type definitions
 type LoginInput = z.infer<typeof loginSchema>;
 
-interface LoginResult {
+type LoginResult = {
   requiresTwoFactor: boolean;
   pendingToken?: string;
   user?: {
@@ -20,23 +22,30 @@ interface LoginResult {
     name: string;
     role: "CUSTOMER" | "PROVIDER";
   };
-}
+};
 
+/**
+ * Login Service
+ * Handles user authentication with 2FA support
+ */
 export async function login(input: LoginInput): Promise<LoginResult> {
-  return withSpan("Login User", async (span) => {
+  return withSpan("LoginService", async (span) => {
     const normalizedEmail = input.email.toLowerCase().trim();
 
-    logger.info({ email: normalizedEmail }, "Login attempt");
+    logger.info("Login attempt", {
+      email: normalizedEmail,
+    });
 
-    const user = await withSpan("Load User", async () => {
+    // 1. Find user
+    const user = await withSpan("LoadUser", async () => {
       return authRepository.findUserForLogin(normalizedEmail);
     });
 
     if (!user) {
+      logger.warn("Login failed: User not found", {
+        email: normalizedEmail,
+      });
       span.setAttribute("failure.reason", "user_not_found");
-
-      logger.warn({ email: normalizedEmail }, "Login failed: user not found");
-
       throw new AuthenticationError(ErrorCode.INVALID_CREDENTIALS);
     }
 
@@ -44,35 +53,32 @@ export async function login(input: LoginInput): Promise<LoginResult> {
     span.setAttribute("user.role", user.userRole);
     span.setAttribute("auth.2fa_enabled", user.twoFactorEnabled);
 
-    const passwordValid = await withSpan("Verify Password", async () => {
+    // 2. Verify password
+    const passwordValid = await withSpan("VerifyPassword", async () => {
       return verifyPassword(input.password, user.password);
     });
 
     if (!passwordValid) {
+      logger.warn("Login failed: Invalid password", {
+        userId: user.id,
+        email: user.email,
+      });
       span.setAttribute("failure.reason", "invalid_password");
-
-      logger.warn(
-        {
-          userId: user.id,
-          email: user.email,
-        },
-        "Login failed: invalid password",
-      );
-
       throw new AuthenticationError(ErrorCode.INVALID_CREDENTIALS);
     }
 
+    // 3. Check if 2FA is enabled
     if (user.twoFactorEnabled) {
-      const pendingToken = await withSpan(
-        "Create Pending Session",
-        async () => {
-          return signPendingToken({
-            userId: user.id,
-          });
-        },
-      );
+      const pendingToken = await withSpan("CreatePendingSession", async () => {
+        return signPendingToken({
+          userId: user.id,
+        });
+      });
 
-      logger.info({ userId: user.id }, "Password verified, awaiting 2FA code");
+      logger.info("Password verified, awaiting 2FA code", {
+        userId: user.id,
+        email: user.email,
+      });
 
       return {
         requiresTwoFactor: true,
@@ -80,7 +86,8 @@ export async function login(input: LoginInput): Promise<LoginResult> {
       };
     }
 
-    const token = await withSpan("Create Session", async () => {
+    // 4. Create session
+    const token = await withSpan("CreateSession", async () => {
       return signToken({
         userId: user.id,
         email: user.email,
@@ -89,17 +96,16 @@ export async function login(input: LoginInput): Promise<LoginResult> {
       });
     });
 
-    await withSpan("Set Authentication Cookie", async () => {
+    // 5. Set authentication cookie
+    await withSpan("SetAuthenticationCookie", async () => {
       await setAuthCookie(token);
     });
 
-    logger.info(
-      {
-        userId: user.id,
-        role: user.userRole,
-      },
-      "User logged in successfully",
-    );
+    logger.info("User logged in successfully", {
+      userId: user.id,
+      email: user.email,
+      role: user.userRole,
+    });
 
     return {
       requiresTwoFactor: false,
