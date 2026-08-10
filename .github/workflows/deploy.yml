@@ -112,8 +112,29 @@ jobs:
             > /tmp/task-definition-full.json
 
       # ----------------------------------------
-            # ----------------------------------------
-      # 9. Get ECS service network configuration
+      # 9. Clean task definition
+      # ----------------------------------------
+      - name: Clean task definition
+        run: |
+          jq 'del(
+            .taskDefinitionArn,
+            .revision,
+            .status,
+            .requiresAttributes,
+            .compatibilities,
+            .registeredAt,
+            .registeredBy,
+            .deregisteredAt,
+            .tags
+          )' \
+          /tmp/task-definition-full.json \
+          > /tmp/task-definition.json
+
+          echo "Cleaned task definition:"
+          cat /tmp/task-definition.json
+
+      # ----------------------------------------
+      # 10. Fetch ECS service network configuration
       # ----------------------------------------
       - name: Fetch ECS network configuration
         run: |
@@ -129,7 +150,7 @@ jobs:
           cat /tmp/awsvpc-configuration.json
 
       # ----------------------------------------
-      # 10. Create migrator task definition
+      # 11. Create migrator task definition
       # ----------------------------------------
       - name: Create migrator task definition
         env:
@@ -150,11 +171,10 @@ jobs:
             /tmp/task-definition.json \
             > /tmp/migrator-task-definition.json
 
-          echo "Migrator task definition:"
-          cat /tmp/migrator-task-definition.json
+          echo "Migrator task definition created."
 
       # ----------------------------------------
-      # 11. Register migrator task definition
+      # 12. Register migrator task definition
       # ----------------------------------------
       - name: Register migrator task definition
         id: register-migrator
@@ -165,13 +185,18 @@ jobs:
             --query "taskDefinition.taskDefinitionArn" \
             --output text)
 
+          if [ -z "$MIGRATOR_TASK_DEFINITION" ] || [ "$MIGRATOR_TASK_DEFINITION" = "None" ]; then
+            echo "Failed to register migrator task definition."
+            exit 1
+          fi
+
           echo "Migrator task definition:"
           echo "$MIGRATOR_TASK_DEFINITION"
 
           echo "task-definition=$MIGRATOR_TASK_DEFINITION" >> "$GITHUB_OUTPUT"
 
       # ----------------------------------------
-      # 12. Run Prisma migrations
+      # 13. Run Prisma migrations
       # ----------------------------------------
       - name: Run Prisma migrations
         env:
@@ -180,12 +205,14 @@ jobs:
           echo "Starting migration task..."
           echo "Task definition: $MIGRATOR_TASK_DEFINITION"
 
+          NETWORK_CONFIG=$(cat /tmp/awsvpc-configuration.json)
+
           TASK_ARN=$(aws ecs run-task \
             --region "$AWS_REGION" \
             --cluster "$ECS_CLUSTER" \
             --launch-type FARGATE \
             --task-definition "$MIGRATOR_TASK_DEFINITION" \
-            --network-configuration "awsvpcConfiguration=$(cat /tmp/awsvpc-configuration.json)" \
+            --network-configuration "awsvpcConfiguration=$NETWORK_CONFIG" \
             --query "tasks[0].taskArn" \
             --output text)
 
@@ -229,27 +256,9 @@ jobs:
           fi
 
           echo "Prisma migrations completed successfully."
-      # ----------------------------------------
-      # 11. Remove ECS-generated metadata
-      # ----------------------------------------
-      - name: Clean task definition
-        run: |
-          jq 'del(
-            .taskDefinitionArn,
-            .revision,
-            .status,
-            .requiresAttributes,
-            .compatibilities,
-            .registeredAt,
-            .registeredBy,
-            .deregisteredAt,
-            .tags
-          )' \
-          /tmp/task-definition-full.json \
-          > /tmp/task-definition.json
 
       # ----------------------------------------
-      # 12. Replace application container image
+      # 14. Update application container image
       # ----------------------------------------
       - name: Update container image
         id: task-definition
@@ -260,7 +269,7 @@ jobs:
           image: ${{ steps.build-image.outputs.image }}
 
       # ----------------------------------------
-      # 13. Deploy new ECS task definition
+      # 15. Deploy new ECS task definition
       # ----------------------------------------
       - name: Deploy to ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
