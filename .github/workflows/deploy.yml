@@ -31,6 +31,14 @@ jobs:
       # ----------------------------------------
       # 2. Authenticate to AWS using OIDC
       # ----------------------------------------
+
+      - name: Show GitHub OIDC claims
+        run: |
+          echo "Repository: $GITHUB_REPOSITORY"
+          echo "Repository ID: ${{ github.repository_id }}"
+          echo "Owner: ${{ github.repository_owner }}"
+          echo "Owner ID: ${{ github.repository_owner_id }}"
+          echo "Ref: $GITHUB_REF"
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
