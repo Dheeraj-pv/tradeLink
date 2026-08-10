@@ -112,7 +112,8 @@ jobs:
             > /tmp/task-definition-full.json
 
       # ----------------------------------------
-      # 9. Fetch ECS service network configuration
+            # ----------------------------------------
+      # 9. Get ECS service network configuration
       # ----------------------------------------
       - name: Fetch ECS network configuration
         run: |
@@ -122,39 +123,69 @@ jobs:
             --services "$ECS_SERVICE" \
             --query "services[0].networkConfiguration.awsvpcConfiguration" \
             --output json \
-            > /tmp/network-configuration.json
+            > /tmp/awsvpc-configuration.json
+
+          echo "Network configuration:"
+          cat /tmp/awsvpc-configuration.json
 
       # ----------------------------------------
-      # 10. Run Prisma migrations
+      # 10. Create migrator task definition
       # ----------------------------------------
-      - name: Run Prisma migrations
-        id: migration
+      - name: Create migrator task definition
         env:
           MIGRATOR_IMAGE: ${{ steps.build-migrator.outputs.image }}
         run: |
+          jq \
+            --arg image "$MIGRATOR_IMAGE" \
+            '
+            .containerDefinitions[0].image = $image
+            |
+            .containerDefinitions[0].command = [
+              "npx",
+              "prisma",
+              "migrate",
+              "deploy"
+            ]
+            ' \
+            /tmp/task-definition.json \
+            > /tmp/migrator-task-definition.json
+
+          echo "Migrator task definition:"
+          cat /tmp/migrator-task-definition.json
+
+      # ----------------------------------------
+      # 11. Register migrator task definition
+      # ----------------------------------------
+      - name: Register migrator task definition
+        id: register-migrator
+        run: |
+          MIGRATOR_TASK_DEFINITION=$(aws ecs register-task-definition \
+            --region "$AWS_REGION" \
+            --cli-input-json file:///tmp/migrator-task-definition.json \
+            --query "taskDefinition.taskDefinitionArn" \
+            --output text)
+
+          echo "Migrator task definition:"
+          echo "$MIGRATOR_TASK_DEFINITION"
+
+          echo "task-definition=$MIGRATOR_TASK_DEFINITION" >> "$GITHUB_OUTPUT"
+
+      # ----------------------------------------
+      # 12. Run Prisma migrations
+      # ----------------------------------------
+      - name: Run Prisma migrations
+        env:
+          MIGRATOR_TASK_DEFINITION: ${{ steps.register-migrator.outputs.task-definition }}
+        run: |
           echo "Starting migration task..."
-          echo "Image: $MIGRATOR_IMAGE"
+          echo "Task definition: $MIGRATOR_TASK_DEFINITION"
 
           TASK_ARN=$(aws ecs run-task \
             --region "$AWS_REGION" \
             --cluster "$ECS_CLUSTER" \
-            --task-definition "$ECS_TASK_DEFINITION" \
             --launch-type FARGATE \
-            --network-configuration file:///tmp/network-configuration.json \
-            --overrides "{
-              \"containerOverrides\": [
-                {
-                  \"name\": \"$CONTAINER_NAME\",
-                  \"image\": \"$MIGRATOR_IMAGE\",
-                  \"command\": [
-                    \"npx\",
-                    \"prisma\",
-                    \"migrate\",
-                    \"deploy\"
-                  ]
-                }
-              ]
-            }" \
+            --task-definition "$MIGRATOR_TASK_DEFINITION" \
+            --network-configuration "awsvpcConfiguration=$(cat /tmp/awsvpc-configuration.json)" \
             --query "tasks[0].taskArn" \
             --output text)
 
@@ -179,7 +210,7 @@ jobs:
             --region "$AWS_REGION" \
             --cluster "$ECS_CLUSTER" \
             --tasks "$TASK_ARN" \
-            --query "tasks[0].containers[?name=='$CONTAINER_NAME'].exitCode | [0]" \
+            --query "tasks[0].containers[0].exitCode" \
             --output text)
 
           STOP_REASON=$(aws ecs describe-tasks \
@@ -198,7 +229,6 @@ jobs:
           fi
 
           echo "Prisma migrations completed successfully."
-
       # ----------------------------------------
       # 11. Remove ECS-generated metadata
       # ----------------------------------------
